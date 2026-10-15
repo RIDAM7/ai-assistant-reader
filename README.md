@@ -78,9 +78,11 @@ Two things are deliberately left as they are rather than tidied:
 
 - **Google's links are signed `/goto` redirects.** The destination is in no
   anchor. The source card with the same href usually carries it, in a favicon
-  request or its markup, and that is where `domain` comes from. A card with no
-  destination anywhere (YouTube's, on the first real reply) keeps an empty
-  domain and its `siteName`. A domain is never guessed from a title.
+  request or its markup, and that is where `domain` comes from. A card that
+  names none (YouTube's, on the first real reply) takes it from the record the
+  reply keeps for that exact link: origin, the names the card shows, and the
+  signed href. A card with neither keeps an empty domain and its `siteName`. A
+  domain is never guessed from a title or a site name.
 - **ChatGPT tags every citation `utm_source=chatgpt.com`.** `url` drops that tag,
   `href` keeps the page's value.
 

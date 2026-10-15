@@ -10,7 +10,8 @@
 import type { AnswerSource, Assistant, Layer } from '../types/answer';
 import { GENERIC, type SiteSelectors } from './selectors';
 import {
-  canonicalKey, cleanLabel, domainFromMarkup, domainOf, isAppLink, pick, pickAll, precedes, resolveHref, text,
+  canonicalKey, cleanLabel, closest, domainFromMarkup, domainFromSourceRecord, domainOf, isAppLink, pick, pickAll, precedes, resolveHref,
+  text,
 } from './utils';
 
 export interface SourceContext {
@@ -37,8 +38,20 @@ const SOURCES_HEADING = /^(sources?|citations?|references?)(\s*[·:(]?\s*\d+\s*\
  * `outsideAnswer`: a panel found by its heading must not lend the answer's own
  * links to the sources. A panel the site's selectors name is a panel wherever
  * it sits — Google draws its cards inside the reply component.
+ *
+ * A /goto card's domain comes from its own markup, else from the source record
+ * its reply component keeps for that exact link. The component's markup is read
+ * once, and only for a card whose own markup names no origin.
  */
 function readItems(items: Element[], site: SiteSelectors, ctx: SourceContext, out: AnswerSource[], seen: Set<string>, outsideAnswer: boolean) {
+  const recordHtml = new Map<Element, string>();
+  const fromRecord = (item: Element, href: string | null) => {
+    const box = closest(item, site.sources.records);
+    if (!box) return '';
+    if (!recordHtml.has(box)) recordHtml.set(box, box.outerHTML ?? '');
+    return domainFromSourceRecord(recordHtml.get(box)!, href);
+  };
+
   for (const item of items) {
     const anchor = item.matches('a[href]') ? item : item.querySelector('a[href]');
     if (!anchor) continue;
@@ -59,7 +72,7 @@ function readItems(items: Element[], site: SiteSelectors, ctx: SourceContext, ou
       order: out.length + 1,
       title,
       url: r.url,
-      domain: r.isRedirect ? domainFromMarkup(item) : domainOf(r.url),
+      domain: r.isRedirect ? domainFromMarkup(item) || fromRecord(item, anchor.getAttribute('href')) : domainOf(r.url),
     };
     if (siteName) source.siteName = siteName;
     if (r.isRedirect) source.urlIsRedirect = true;

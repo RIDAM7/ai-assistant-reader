@@ -270,12 +270,36 @@ test('Google AI Mode: a /goto citation takes its domain from the source card wit
   assert.doesNotMatch(d.answer, /Opens in new tab|AI Mode replied/);
 });
 
-test('Google AI Mode: a card with no destination anywhere keeps its site name and no invented domain', () => {
+test("Google AI Mode: a card that names no origin takes it from the reply's source record for its link", () => {
   const d = collect(GOOGLE_REAL, GOOGLE_SERP_URL, { assistant: 'google_ai_mode' });
   const youtube = d.sources.filter((s) => s.siteName === 'YouTube');
   assert.equal(youtube.length, 4);
-  assert.ok(youtube.every((s) => s.domain === ''), 'a domain was guessed from a site name');
+  assert.ok(youtube.every((s) => s.domain === 'youtube.com'), 'from the record the reply keeps for each card');
   assert.ok(youtube.every((s) => !/open in an external site/.test(s.title)));
+  // An inline link shares its card's href, so it shares the card's domain.
+  const shared = d.links.filter((l) => youtube.some((s) => s.url === l.url));
+  assert.deepEqual(shared.map((l) => l.domain), ['youtube.com']);
+});
+
+test('Google AI Mode: with no record and no origin in the markup, a card keeps its site name and no invented domain', () => {
+  // The same reply with YouTube's origin made unreadable everywhere: nothing is left to say youtube.com but the site name.
+  const stripped = GOOGLE_REAL.replace(/(https?:\/\/)(www\.)?youtube\.com/gi, '$1unknown');
+  const d = collect(stripped, GOOGLE_SERP_URL, { assistant: 'google_ai_mode' });
+  const youtube = d.sources.filter((s) => s.siteName === 'YouTube');
+  assert.equal(youtube.length, 4);
+  assert.ok(youtube.every((s) => s.domain === ''), 'a domain was guessed from a site name');
+});
+
+test("Google AI Mode: a source record answers for its own link only, never one its link's blob begins", () => {
+  const blob = 'CAESawHr' + 'A'.repeat(16);
+  const card = (b) => `<li class="Ioqnib"><a href="/goto?url=${b}&amp;ved=x"><span class="EsfOKc">YouTube</span></a></li>`;
+  const page = `<html><body><main><div data-subtree="aimc"
+    data-records='"https://www.youtube.com",["YouTube","Jean Lee"],"/goto?url=${blob}Z"'>
+    <p>Watch a roadmap walkthrough first.</p>
+    <ul class="hJYS7c">${card(`${blob}Z`)}${card(blob)}</ul>
+  </div></main></body></html>`;
+  const d = collect(page, GOOGLE_SERP_URL, { assistant: 'google_ai_mode' });
+  assert.deepEqual(d.sources.map((s) => s.domain), ['youtube.com', '']);
 });
 
 test('Google AI Mode: q= is the question when the page names none', () => {

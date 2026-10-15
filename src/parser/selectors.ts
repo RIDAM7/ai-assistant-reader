@@ -28,7 +28,7 @@
  * broader one that matches its children.
  */
 
-export const PARSER_VERSION = '1.1.0';
+export const PARSER_VERSION = '1.2.0';
 
 export interface SiteSelectors {
   /** The conversation's container: the snapshot's root. Must hold the last answer to be used. */
@@ -59,6 +59,11 @@ export interface SiteSelectors {
     title: string[];
     /** The publisher name a card shows. */
     siteName: string[];
+    /**
+     * Around a card: the component whose markup holds the page's own record of
+     * each source, searched for a /goto card's origin when the card names none.
+     */
+    records: string[];
   };
   /** Present only while the answer is still being written. */
   streaming: string[];
@@ -127,6 +132,7 @@ export const CHATGPT: SiteSelectors = {
     items: ['li', '[data-testid*="source-item" i]'],
     title: ['[data-testid*="title" i]', '.font-semibold', 'h3', 'h4'],
     siteName: ['[data-testid*="domain" i]', '.text-token-text-secondary'],
+    records: [],
   },
   streaming: [
     '[data-talvt-turn-state]:not([data-talvt-turn-state="complete"])',
@@ -162,6 +168,7 @@ export const PERPLEXITY: SiteSelectors = {
     items: ['[data-testid*="source-item" i]', 'a[href]'],
     title: ['[data-testid*="title" i]', '.line-clamp-2', '.line-clamp-1'],
     siteName: ['[data-testid*="domain" i]'],
+    records: [],
   },
   streaming: ['[data-testid*="stop-generating" i]', 'button[aria-label="Stop" i]'],
   webSearch: ['[data-pplx-citation]', 'span.citation'],
@@ -191,6 +198,7 @@ export const CLAUDE: SiteSelectors = {
     items: ['li', 'a[href]'],
     title: ['[data-testid*="title" i]', '.font-medium'],
     siteName: ['[data-testid*="domain" i]'],
+    records: [],
   },
   streaming: ['[data-testid="assistant-message"][data-is-streaming="true"]', '[data-is-streaming="true"]', 'button[aria-label="Stop response" i]'],
   webSearch: ['[data-testid*="web-search" i]', '[data-testid*="tool-use" i]'],
@@ -226,6 +234,8 @@ export const GOOGLE_AI_MODE: SiteSelectors = {
     items: ['li.Ioqnib'],
     title: [],
     siteName: ['span.EsfOKc'],
+    // The reply component: its inline data pairs each card's signed link with the origin (sources.ts).
+    records: ['[data-subtree="aimc"]'],
   },
   streaming: ['[data-subtree="aimc"][data-complete="false"]'],
   webSearch: [],
@@ -255,6 +265,7 @@ export const GEMINI: SiteSelectors = {
     items: ['a[href]'],
     title: [],
     siteName: [],
+    records: [],
   },
   streaming: ['model-response [aria-busy="true"]', 'button[aria-label="Stop response" i]'],
   webSearch: ['source-inline-chip', 'sources-carousel-inline'],

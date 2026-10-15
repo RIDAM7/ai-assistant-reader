@@ -22,6 +22,19 @@ export function pick(root: ParentNode, selectors: string[]): Element | null {
   return null;
 }
 
+/** The element itself or its nearest ancestor matching a selector in the list, tried in turn, or null. */
+export function closest(el: Element, selectors: string[]): Element | null {
+  for (const sel of selectors) {
+    try {
+      const found = el.closest(sel);
+      if (found) return found;
+    } catch {
+      // An invalid selector must not take the whole extraction down.
+    }
+  }
+  return null;
+}
+
 /** The selectors in the list that parse, so one outgrown selector cannot void the rest. */
 function validSelectors(root: ParentNode, selectors: string[]): string[] {
   return selectors.filter((sel) => {
@@ -293,14 +306,20 @@ export function canonicalKey(url: string): string {
 const HOSTNAME = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,24}$/i;
 
 /**
+ * Hosts in Google's markup that are its own plumbing or a namespace, never the publisher.
+ * developers.google.com and the like stay: SERP Reader dropped them once and invented a finding.
+ */
+const MARKUP_NOISE_HOSTS = /^google\.[a-z.]+$|(^|\.)(gstatic\.com|googleusercontent\.com|googleapis\.com|w3\.org|schema\.org)$/i;
+
+/**
  * A destination domain read from a card's own markup, for a link whose href is
  * a signed Google /goto.
  *
  * Measured on the first real AI Mode reply: 15 of its 19 source cards carry
  * their site's origin, in a favicon request (`faviconV2?url=https://www.udemy.com`)
  * or in the card's other markup. The other four are YouTube cards with a video
- * thumbnail and no origin anywhere; those get no domain, and their card's site
- * name says what they were. Nothing is reconstructed from a title.
+ * thumbnail and no origin anywhere; domainFromSourceRecord answers for those.
+ * Nothing is reconstructed from a title.
  */
 export function domainFromMarkup(el: Element): string {
   const html = el.outerHTML ?? '';
@@ -309,12 +328,37 @@ export function domainFromMarkup(el: Element): string {
   for (const c of candidates) {
     if (!c) continue;
     const domain = domainOf(c);
-    if (!domain || !HOSTNAME.test(domain)) continue;
-    // Google's own plumbing, not a publisher. developers.google.com and the like stay: SERP Reader dropped them once and invented a finding.
-    if (/^google\.[a-z.]+$|(^|\.)(gstatic\.com|googleusercontent\.com|googleapis\.com|w3\.org|schema\.org)$/i.test(domain)) continue;
+    if (!domain || !HOSTNAME.test(domain) || MARKUP_NOISE_HOSTS.test(domain)) continue;
     return domain;
   }
   return '';
+}
+
+/**
+ * The origin the page's own source record pairs with one /goto link, for a
+ * card whose markup names none. SERP Reader's domainFromSourceRecord.
+ *
+ * Google's AI Mode reply keeps a record per source in its inline data, as
+ * `"https://www.youtube.com",["YouTube","Jean Lee"],"/goto?url=CAESawHr…"`:
+ * the origin, the names the card shows, and the card's exact signed link. On
+ * prokopi.in's 2026-10-15 captures SERP Reader found one for all 118 linked
+ * cards with no origin in their markup (YouTube, Instagram, LinkedIn), and on
+ * the 508 cards where both answer, the record and the card's markup agree.
+ *
+ * Keyed by the whole blob, case and all, and never by its prefix, so a record
+ * answers only for its own card. Quotes appear as `"` in a script and `&quot;`
+ * in an attribute or a comment, `=` as itself or `=`, in Chrome and
+ * linkedom alike. The host is cut out by string work, never `new URL()`.
+ */
+export function domainFromSourceRecord(html: string, href: string | null | undefined): string {
+  const blob = (href ?? '').match(/[?&]url=([A-Za-z0-9_-]{16,})/)?.[1];
+  if (!blob || !html) return '';
+  const q = '(?:"|&quot;)';
+  const record = new RegExp(
+    `${q}(https?://[A-Za-z0-9.-]+[.][A-Za-z]{2,24})${q},\\[[^\\]]{0,400}\\],${q}/goto[?]url(?:=|\\\\u003[dD])${blob}(?![A-Za-z0-9_-])`,
+  );
+  const host = (html.match(record)?.[1] ?? '').replace(/^https?:\/\//, '').replace(/^www\./i, '').toLowerCase();
+  return HOSTNAME.test(host) && !MARKUP_NOISE_HOSTS.test(host) ? host : '';
 }
 
 export function uuid(): string {
