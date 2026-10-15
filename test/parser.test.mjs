@@ -1,0 +1,287 @@
+/**
+ * Parser and export tests.
+ *
+ *   npm test
+ *
+ * What these prove and what they do not is written at the top of fixtures.mjs.
+ * Short version: the logic, on markup written from selectors.ts — except Google
+ * AI Mode, which is read from real markup here and in real-capture.test.mjs.
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { parseHTML } from 'linkedom';
+
+import { collectAnswer, detectAssistant } from './.parser.mjs';
+import { answersCsv, answersJson, citationsCsv } from './.export.mjs';
+import { CHATGPT_ANSWER, QUESTION, URLS, chatgptPage, claudePage, perplexityPage } from './fixtures.mjs';
+
+const parse = (html) => parseHTML(html).document;
+const collect = (html, url, opts = {}) => collectAnswer(parse(html), url, opts);
+
+/* ------------------------------------------------------------- which site */
+
+test('recognises the four assistants, and Google only on its AI Mode tab', () => {
+  assert.equal(detectAssistant('https://chatgpt.com/c/abc'), 'chatgpt');
+  assert.equal(detectAssistant('https://chat.openai.com/'), 'chatgpt');
+  assert.equal(detectAssistant('https://www.perplexity.ai/search/x'), 'perplexity');
+  assert.equal(detectAssistant('https://claude.ai/new'), 'claude');
+  assert.equal(detectAssistant('https://www.google.com/search?q=x&udm=50'), 'google_ai_mode');
+  assert.equal(detectAssistant('https://www.google.co.in/search?udm=50&q=x'), 'google_ai_mode');
+  // A plain results page is SERP Reader's. Two Collect buttons on one SERP is a mistake waiting to happen.
+  assert.equal(detectAssistant('https://www.google.com/search?q=x'), null);
+  assert.equal(detectAssistant('https://www.google.com/search?q=x&udm=2'), null);
+  assert.equal(detectAssistant('https://example.com/chat'), null);
+  assert.equal(detectAssistant('not a url'), null);
+});
+
+/* ---------------------------------------------------------------- ChatGPT */
+
+test('ChatGPT: the last question and the last answer, not the first', () => {
+  const d = collect(
+    chatgptPage({ turns: [['What is RAG?', '<p>Retrieval augmented generation is a pattern for grounding answers.</p>'], [QUESTION, CHATGPT_ANSWER]] }),
+    URLS.chatgpt,
+  );
+  assert.equal(d.metadata.assistant, 'chatgpt');
+  assert.equal(d.metadata.question, QUESTION);
+  assert.match(d.answer, /names that come up most/);
+  assert.doesNotMatch(d.answer, /Retrieval augmented/, 'an earlier answer leaked in');
+  assert.doesNotMatch(d.answer, /\bCopy\b/, 'a button label leaked into the answer');
+  assert.equal(d.metadata.conversationId, '68ee1f2a-0b7c-8003-9f1e-2d6c1a5b7e10');
+  assert.deepEqual(d.diagnostics.turns, { user: 2, assistant: 2 });
+  assert.deepEqual(d.diagnostics.warnings, []);
+});
+
+test('the answer keeps its lines: list items do not run into each other', () => {
+  // textContent would give "…doubt support.codingninjasMasai School…", and a
+  // brand list read that way is one long word.
+  const d = collect(chatgptPage(), URLS.chatgpt);
+  const lines = d.answer.split('\n');
+  assert.ok(lines.some((l) => l.startsWith('Masai School')), d.answer);
+  assert.ok(lines.some((l) => l.startsWith('Coding Ninjas')), d.answer);
+});
+
+test('links: in order, one per destination with a count, the tracking tag off, the app itself left out', () => {
+  const d = collect(chatgptPage(), URLS.chatgpt);
+  assert.deepEqual(d.links.map((l) => l.domain), ['scaler.com', 'codingninjas.com']);
+  assert.deepEqual(d.links.map((l) => l.order), [1, 2]);
+  const ninjas = d.links[1];
+  assert.equal(ninjas.count, 2, 'the same citation twice is one link cited twice');
+  assert.equal(ninjas.url, 'https://www.codingninjas.com/courses', 'utm_source=chatgpt.com is the assistant\'s mark, not the page');
+  assert.match(ninjas.href, /utm_source=chatgpt\.com/, 'the href is kept as the page had it');
+  assert.equal(ninjas.anchorText, 'codingninjas');
+  assert.ok(!d.links.some((l) => /chatgpt\.com/.test(l.url)), 'a link to a new chat is not a citation');
+  assert.equal(d.metadata.webSources, true);
+  assert.equal(d.diagnostics.layers.links, 'site');
+});
+
+test('model: the label on the answer itself, over the picker in the header', () => {
+  // The picker says what the next message will use; the slug says what wrote this one.
+  assert.equal(collect(chatgptPage({ modelSlug: 'gpt-5-thinking', header: 'ChatGPT 5' }), URLS.chatgpt).metadata.model, 'gpt-5-thinking');
+  assert.equal(collect(chatgptPage({ modelSlug: null, header: 'ChatGPT 5 Pro' }), URLS.chatgpt).metadata.model, 'ChatGPT 5 Pro');
+  const none = collect(chatgptPage({ modelSlug: null, header: null }), URLS.chatgpt);
+  assert.equal(none.metadata.model, undefined, 'no label shown, none invented');
+  assert.equal(none.diagnostics.layers.model, 'none');
+});
+
+test('sources panel: read in its own order, outside the conversation', () => {
+  const panel = [
+    { title: 'Scaler Academy', url: 'https://www.scaler.com/academy/?utm_source=chatgpt.com' },
+    { title: 'Coding Ninjas courses', url: 'https://www.codingninjas.com/courses' },
+    { title: 'GeeksforGeeks', url: 'https://www.geeksforgeeks.org/courses' },
+  ];
+  const d = collect(chatgptPage({ panel }), URLS.chatgpt);
+  assert.deepEqual(d.sources.map((s) => [s.order, s.domain, s.title]), [
+    [1, 'scaler.com', 'Scaler Academy'],
+    [2, 'codingninjas.com', 'Coding Ninjas courses'],
+    [3, 'geeksforgeeks.org', 'GeeksforGeeks'],
+  ]);
+  assert.equal(d.sources[0].url, 'https://www.scaler.com/academy/');
+  assert.equal(d.diagnostics.layers.sources, 'site');
+  assert.equal(d.links.length, 2, 'panel sources are not answer links');
+});
+
+test('a streaming answer is saved and flagged, never refused on a selector guess', () => {
+  const d = collect(chatgptPage({ streaming: true }), URLS.chatgpt);
+  assert.equal(d.diagnostics.streaming, true);
+  assert.ok(d.diagnostics.warnings.some((w) => /still writing/.test(w)));
+  assert.ok(d.answer.length > 0);
+});
+
+/* -------------------------------------------------------------- snapshot */
+
+test('the snapshot holds the conversation and nothing private', () => {
+  const html = chatgptPage({ panel: [{ title: 'Scaler', url: 'https://www.scaler.com/' }] });
+  const d = collectAnswer(parse(html), URLS.chatgpt, { includeRawHtml: true });
+  const raw = d.rawHtml;
+  assert.ok(raw, 'no snapshot');
+  assert.equal(d.diagnostics.snapshot, 'conversation');
+  assert.match(raw, /names that come up most/);
+  // These go into a research repository.
+  assert.doesNotMatch(raw, /My private chat about salary/, 'the sidebar\'s other chats were kept');
+  assert.doesNotMatch(raw, /person@example\.com|sk-live-secret/, 'session state from a script was kept');
+  assert.doesNotMatch(raw, /half-typed draft/, 'the composer draft was kept');
+  assert.doesNotMatch(raw, /Person Name/, 'the account button was kept');
+  // ...and what a re-parse needs from outside the conversation is there.
+  assert.match(raw, /model-switcher-dropdown-button/);
+  assert.match(raw, /Scaler/);
+});
+
+test('a snapshot re-parses to the same record, with no live page', () => {
+  const panel = [{ title: 'Scaler', url: 'https://www.scaler.com/' }];
+  const live = collectAnswer(parse(chatgptPage({ panel, modelSlug: null })), URLS.chatgpt, { includeRawHtml: true });
+  const again = collectAnswer(parse(live.rawHtml), live.metadata.url);
+  const shape = (d) => ({ q: d.metadata.question, a: d.answer, l: d.links, s: d.sources, m: d.metadata.model, w: d.metadata.webSources, lang: d.metadata.language });
+  assert.deepEqual(shape(again), shape(live));
+  // The snapshot says which assistant it is, for a re-parse that has lost the URL.
+  assert.equal(collectAnswer(parse(live.rawHtml), '').metadata.assistant, 'chatgpt');
+});
+
+test('the raw HTML is dropped from an export only when the caller says so', () => {
+  const d = collectAnswer(parse(chatgptPage()), URLS.chatgpt, { includeRawHtml: true });
+  const kept = JSON.parse(answersJson([d], true, new Date('2026-10-20T06:00:00Z')));
+  assert.equal(kept.count, 1);
+  assert.equal(kept.exportedAt, '2026-10-20T06:00:00.000Z');
+  assert.ok(kept.answers[0].rawHtml, 'the snapshot was dropped from the full export');
+  assert.equal(JSON.parse(answersJson([d], false)).answers[0].rawHtml, undefined);
+});
+
+/* ------------------------------------------------------- Perplexity, Claude */
+
+test('Perplexity: the query heading, the prose answer, the sources list', () => {
+  const sources = [
+    { title: 'GeeksforGeeks live courses', url: 'https://www.geeksforgeeks.org/courses/live' },
+    { title: 'Newton School', url: 'https://www.newtonschool.co/' },
+  ];
+  const d = collect(perplexityPage({ sources }), URLS.perplexity);
+  assert.equal(d.metadata.question, QUESTION);
+  assert.match(d.answer, /GeeksforGeeks and Newton School/);
+  assert.deepEqual(d.links.map((l) => l.domain), ['geeksforgeeks.org', 'bosscoderacademy.com']);
+  assert.deepEqual(d.sources.map((s) => s.title), ['GeeksforGeeks live courses', 'Newton School']);
+  assert.equal(d.metadata.conversationId, 'which-is-the-best-ai-engineeri-Xy7qLm0QTe6');
+});
+
+test('Claude: question, answer and model; no links and no search means no web sources', () => {
+  const d = collect(claudePage(), URLS.claude);
+  assert.equal(d.metadata.question, QUESTION);
+  assert.match(d.answer, /Prokopi \(prokopi\.in\) runs live/);
+  assert.equal(d.metadata.model, 'Claude Opus 5.5');
+  assert.equal(d.links.length, 0);
+  assert.equal(d.metadata.webSources, false, 'an answer from the model alone must say so');
+});
+
+test('Claude: a "Searched the web" line counts as web sources even with nothing linked', () => {
+  const d = collect(claudePage({ searched: true }), URLS.claude);
+  assert.equal(d.metadata.webSources, true);
+  assert.doesNotMatch(d.answer, /Searched the web/, 'the tool line is not the answer');
+});
+
+test('Claude: data-is-streaming="true" flags the capture', () => {
+  assert.equal(collect(claudePage({ streaming: true }), URLS.claude).diagnostics.streaming, true);
+  assert.equal(collect(claudePage({ streaming: false }), URLS.claude).diagnostics.streaming, false);
+});
+
+/* --------------------------------------------------------- generic layer */
+
+test('when the site\'s selectors miss, the generic layer still reads the last turn and its links', () => {
+  // A ChatGPT that renamed everything: no data-message-author-role anywhere.
+  const html = `<!doctype html><html><body><main>
+    <div class="msg user-message">Old question</div>
+    <article class="turn"><div class="answer-markdown"><p>Old answer, long enough to count as a turn.</p></div></article>
+    <div class="msg user-message">${QUESTION}</div>
+    <article class="turn"><div class="answer-markdown"><p>Masai School and Scaler both run live cohorts for freshers.</p>
+      <p><a href="https://www.masaischool.com/?utm_source=chatgpt.com">masaischool</a> <a href="/c/other">another chat</a></p></div></article>
+  </main></body></html>`;
+  const d = collect(html, URLS.chatgpt);
+  assert.equal(d.diagnostics.layers.answer, 'generic');
+  assert.ok(d.diagnostics.warnings.some((w) => /generic layer/.test(w)), 'the fallback must say it ran');
+  assert.match(d.answer, /Masai School and Scaler/);
+  assert.doesNotMatch(d.answer, /Old answer/);
+  assert.equal(d.metadata.question, QUESTION);
+  assert.deepEqual(d.links.map((l) => l.url), ['https://www.masaischool.com/']);
+});
+
+test('with nothing turn-shaped at all, the whole conversation is read and the record says so', () => {
+  const html = `<!doctype html><html><body><main><p>${QUESTION}</p><p>Try <a href="https://www.scaler.com/">Scaler</a>.</p></main></body></html>`;
+  const d = collect(html, URLS.claude);
+  assert.match(d.answer, /Try Scaler/);
+  assert.deepEqual(d.links.map((l) => l.domain), ['scaler.com']);
+  assert.ok(d.diagnostics.warnings.some((w) => /whole conversation/.test(w)));
+});
+
+test('a panel headed "Sources" is found when the site\'s panel selectors miss', () => {
+  const html = chatgptPage().replace(
+    '</main>',
+    '</main><section class="drawer"><h3>Sources</h3><a href="https://www.newtonschool.co/">Newton School</a><a href="https://www.masaischool.com/">Masai</a></section>',
+  );
+  const d = collect(html, URLS.chatgpt);
+  assert.equal(d.diagnostics.layers.sources, 'heading');
+  assert.deepEqual(d.sources.map((s) => s.domain), ['newtonschool.co', 'masaischool.com']);
+});
+
+test('a "Sources:" line the model wrote stays part of the answer', () => {
+  const answer = `${CHATGPT_ANSWER}<p><strong>Sources</strong></p><ul><li><a href="https://www.geekster.in/">Geekster</a></li></ul>`;
+  const d = collect(chatgptPage({ turns: [[QUESTION, answer]] }), URLS.chatgpt);
+  assert.ok(d.links.some((l) => l.domain === 'geekster.in'), 'the answer lost its own links to a panel');
+  assert.ok(!d.sources.some((s) => s.domain === 'geekster.in'));
+});
+
+test('an empty page yields an empty answer and says why, rather than throwing', () => {
+  const d = collect('<html><body></body></html>', URLS.chatgpt);
+  assert.equal(d.answer, '');
+  assert.ok(d.diagnostics.warnings.length > 0);
+  assert.throws(() => collect('<html><body></body></html>', 'https://example.com/'), /Not a supported assistant page/);
+});
+
+/* ------------------------------------------------- Google AI Mode, real markup */
+
+const GOOGLE_REAL = readFileSync('test/fixtures/real-google_ai_mode-ai-engineer-career.html', 'utf8');
+const GOOGLE_SERP_URL = 'https://www.google.com/search?q=ai%20engineer%20career&gl=in&hl=en&pws=0&num=20';
+
+test('Google AI Mode: a /goto citation takes its domain from the source card with the same href', () => {
+  // Every href is a signed /goto blob; the destination is in no anchor. The
+  // cards carry it in their favicon request or markup, and an inline chip
+  // shares its card's href.
+  const d = collect(GOOGLE_REAL, GOOGLE_SERP_URL, { assistant: 'google_ai_mode' });
+  assert.equal(d.metadata.question, 'ai engineer career', 'the reply names its own question');
+  assert.equal(d.diagnostics.layers.question, 'site');
+  assert.equal(d.sources.length, 19);
+  assert.ok(d.sources.every((s) => s.urlIsRedirect && s.url.includes('/goto?')), 'the honest redirect is kept');
+  assert.equal(d.sources[3].domain, 'udemy.com');
+  assert.equal(d.links[0].domain, 'roadmap.sh');
+  assert.equal(d.links[0].anchorText, 'Roadmap.sh');
+  assert.doesNotMatch(d.answer, /Opens in new tab|AI Mode replied/);
+});
+
+test('Google AI Mode: a card with no destination anywhere keeps its site name and no invented domain', () => {
+  const d = collect(GOOGLE_REAL, GOOGLE_SERP_URL, { assistant: 'google_ai_mode' });
+  const youtube = d.sources.filter((s) => s.siteName === 'YouTube');
+  assert.equal(youtube.length, 4);
+  assert.ok(youtube.every((s) => s.domain === ''), 'a domain was guessed from a site name');
+  assert.ok(youtube.every((s) => !/open in an external site/.test(s.title)));
+});
+
+test('Google AI Mode: q= is the question when the page names none', () => {
+  const d = collect('<html><body><main><div data-subtree="aimc"><p>Masai School runs live cohorts in Bengaluru.</p></div></main></body></html>', URLS.google);
+  assert.equal(d.metadata.question, 'ai engineer career');
+  assert.equal(d.diagnostics.layers.question, 'url');
+});
+
+/* ------------------------------------------------------------------ export */
+
+test('CSV: a multi-line answer with commas and quotes stays one row', () => {
+  const d = collect(chatgptPage({ turns: [[QUESTION, '<p>Line one, with "quotes".</p><p>Line two.</p>']] }), URLS.chatgpt);
+  const csv = answersCsv([d]);
+  assert.ok(csv.includes('"Line one, with ""quotes"".\nLine two."'), csv);
+  assert.equal(csv.split('\r\n').filter(Boolean).length, 2, 'header and one row');
+});
+
+test('citations CSV: one row per panel source and per answer link, kind says which', () => {
+  const d = collect(chatgptPage({ panel: [{ title: 'Scaler', url: 'https://www.scaler.com/' }] }), URLS.chatgpt);
+  const rows = citationsCsv([d]).trim().split('\r\n');
+  assert.equal(rows[0], 'assistant,question,collected_at,kind,order,title,url,domain,site_name,count,answer_id');
+  assert.equal(rows.length, 1 + 1 + 2);
+  assert.equal(rows.filter((r) => r.includes(',source,')).length, 1);
+  assert.equal(rows.filter((r) => r.includes(',link,')).length, 2);
+  assert.ok(rows.some((r) => r.includes(',link,2,codingninjas,https://www.codingninjas.com/courses,codingninjas.com,,2,')));
+});

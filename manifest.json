@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Answer Reader",
+  "version": "1.0.0",
+  "description": "Reads and stores the AI assistant answer you already have open. It never types, clicks or asks: you ask the question, you press Collect.",
+  "permissions": ["unlimitedStorage"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Answer Reader",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://www.perplexity.ai/*",
+        "https://perplexity.ai/*",
+        "https://claude.ai/*",
+        "*://www.google.com/search*",
+        "*://www.google.co.in/search*",
+        "*://www.google.co.uk/search*",
+        "*://www.google.ca/search*",
+        "*://www.google.com.au/search*",
+        "*://www.google.ie/search*",
+        "*://www.google.de/search*",
+        "*://www.google.fr/search*",
+        "*://www.google.nl/search*",
+        "*://www.google.es/search*",
+        "*://www.google.it/search*",
+        "*://www.google.com.sg/search*",
+        "*://www.google.ae/search*",
+        "*://google.com/search*"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "origin": "SERP Reader capture of google.com/search?q=ai engineer career (gl=in, 2026-10-15, seo-and-geo-research sites/prokopi.in/serp/2026-10-15-india): the AI Mode reply Google put in its AI Overview slot, its [data-scope-id=turn] element only. Not the AI Mode tab.",
+  "capturedAt": "2026-10-15T06:13:39.968Z",
+  "url": "https://www.google.com/search?q=ai%20engineer%20career&gl=in&hl=en&pws=0&num=20",
+  "assistant": "google_ai_mode",
+  "parserVersion": "1.0.0",
+  "question": "ai engineer career",
+  "model": null,
+  "webSources": true,
+  "answerNonEmpty": true,
+  "linkCount": 7,
+  "linkDomains": [
+    "roadmap.sh",
+    "learn.microsoft.com",
+    "codecademy.com",
+    "coursera.org",
+    "",
+    "tcs.com",
+    "naukri.com"
+  ],
+  "sourceCount": 19,
+  "sourceDomains": [
+    "learn.microsoft.com",
+    "coursera.org",
+    "roadmap.sh",
+    "udemy.com",
+    "",
+    "openai.com",
+    "amazon.jobs",
+    "dataexpert.io",
+    "codecademy.com",
+    "",
+    "naukri.com",
+    "",
+    "coursera.org",
+    "",
+    "tcs.com",
+    "engg.cambridge.edu.in",
+    "karpagamtech.ac.in",
+    "accenture.com",
+    "in.linkedin.com"
+  ],
+  "layers": {
+    "question": "site",
+    "answer": "site",
+    "links": "site",
+    "sources": "site",
+    "model": "none"
+  }
+}
