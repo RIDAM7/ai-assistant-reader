@@ -138,3 +138,34 @@ export const URLS = {
   claude: 'https://claude.ai/chat/0f9b2c4e-1a2b-4c3d-9e8f-123456789abc',
   google: 'https://www.google.com/search?q=ai+engineer+career&udm=50&hl=en',
 };
+
+/**
+ * Gemini, from the app's element names (user-query, model-response,
+ * message-content). The sidebar lists other chats and ends with the person's
+ * name; the composer holds the model switcher. Neither may reach a snapshot,
+ * except the switcher's label.
+ */
+export function geminiPage({ question = QUESTION, answer, model = 'Flash' } = {}) {
+  return page({
+    body: `
+    <bard-sidenav><side-navigation-v2>
+      <a href="/app/older">Pizza Tower Next to Jenga</a><div class="account">Person Name</div>
+    </side-navigation-v2></bard-sidenav>
+    <main><chat-window><div id="chat-history">
+      <div class="conversation-container">
+        <user-query><div class="query-text"><p class="query-text-line">${question}</p></div></user-query>
+        <model-response><message-content><div class="markdown">${
+          answer ??
+          `<p>For freshers, the right choice depends on placement drives and hands-on engineering.<source-inline-chip><button>ANI News</button></source-inline-chip></p>
+           <table><tr><th>Program</th><th>Format</th></tr><tr><td>AlmaBetter</td><td>Live online cohorts</td></tr><tr><td>Learnbay</td><td>100% live sessions</td></tr></table>
+           <p>See <a href="https://www.almabetter.com/">AlmaBetter</a> and <a href="https://www.google.com/search?q=learnbay">search for Learnbay</a>.</p>`
+        }</div></message-content></model-response>
+      </div>
+    </div></chat-window>
+    <input-area-v2><rich-textarea><div contenteditable="true">a draft</div></rich-textarea>
+      <bard-mode-switcher><button>${model}</button></bard-mode-switcher></input-area-v2>
+    </main>`,
+  });
+}
+
+URLS.gemini = 'https://gemini.google.com/app/e18b1d6c7596d509?hl=en-IN';

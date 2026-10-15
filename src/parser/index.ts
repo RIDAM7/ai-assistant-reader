@@ -49,7 +49,7 @@ export function collectAnswer(doc: Document, pageUrl: string, opts: CollectOptio
   const warnings: string[] = [];
 
   const assistant = assistantOf(doc, pageUrl, opts.assistant);
-  if (!assistant) throw new Error('Not a supported assistant page: ChatGPT, Perplexity, Claude, or the AI Mode tab of Google.');
+  if (!assistant) throw new Error('Not a supported assistant page: ChatGPT, Perplexity, Claude, Gemini, or the AI Mode tab of Google.');
   const site = SITES[assistant];
   const name = ASSISTANT_NAMES[assistant];
 
@@ -141,8 +141,11 @@ export function collectAnswer(doc: Document, pageUrl: string, opts: CollectOptio
   const modelLabel = pick(doc, site.model);
   if (!model) {
     const label = text(modelLabel);
-    if (label && label.length <= 80) model = label;
+    // A picker that names no model ("Model", "Choose model") is not a label; Perplexity's said exactly that.
+    if (label && label.length <= 80 && !/^(choose |select |switch )?models?$/i.test(label)) model = label;
   }
+  // A snapshot carries the label its capture read; the composer it came from is not in it.
+  if (!model) model = doc.querySelector('[data-answer-reader-snapshot]')?.getAttribute('data-model') || undefined;
 
   /* ------------------------------------------------------ streaming, web */
 
@@ -169,7 +172,8 @@ export function collectAnswer(doc: Document, pageUrl: string, opts: CollectOptio
               pageUrl, assistant, site, language,
               lastUser: turns.lastUser,
               answerTurn: turns.lastAssistant ?? turns.answer,
-              extras: [...panels, ...(modelLabel ? [modelLabel] : [])],
+              model,
+              extras: panels,
             },
             opts.maxRawHtmlBytes ?? 1_500_000,
           ),

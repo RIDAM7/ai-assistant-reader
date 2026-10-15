@@ -21,7 +21,7 @@ import { expectationsOf } from './expect.mjs';
 const FIXTURES = 'test/fixtures';
 const captures = existsSync(FIXTURES) ? readdirSync(FIXTURES).filter((f) => f.startsWith('real-') && f.endsWith('.html')) : [];
 
-for (const assistant of ['chatgpt', 'perplexity', 'claude', 'google_ai_mode']) {
+for (const assistant of ['chatgpt', 'perplexity', 'claude', 'google_ai_mode', 'gemini']) {
   if (!captures.some((f) => f.startsWith(`real-${assistant}-`))) {
     test(`real capture: none from ${assistant} yet`, { skip: 'Collect one answer, export, then run test/import-capture.mjs' }, () => {});
   }

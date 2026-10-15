@@ -7,7 +7,7 @@
  * Anything new gets added as optional.
  */
 
-export type Assistant = 'chatgpt' | 'perplexity' | 'claude' | 'google_ai_mode';
+export type Assistant = 'chatgpt' | 'perplexity' | 'claude' | 'google_ai_mode' | 'gemini';
 
 /**
  * A link inside the answer text, in the order it first appears.

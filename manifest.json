@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Answer Reader",
   "version": "1.0.0",
-  "description": "Reads and stores the AI assistant answer you already have open. It never types, clicks or asks: you ask the question, you press Collect.",
+  "description": "Reads and stores the AI assistant answer you already have open in ChatGPT, Perplexity, Claude, Gemini or Google AI Mode. It never types, clicks or asks: you ask the question, you press Collect.",
   "permissions": ["unlimitedStorage"],
   "background": {
     "service_worker": "background.js",
@@ -32,6 +32,7 @@
         "https://www.perplexity.ai/*",
         "https://perplexity.ai/*",
         "https://claude.ai/*",
+        "https://gemini.google.com/*",
         "*://www.google.com/search*",
         "*://www.google.co.in/search*",
         "*://www.google.co.uk/search*",

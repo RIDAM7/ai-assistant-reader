@@ -7,11 +7,14 @@
  * their name and email, a half-typed draft in the composer, and inline scripts
  * holding session state. So the snapshot is the element that holds the
  * conversation, with every `private` selector removed from a copy, plus any
- * element outside it that a re-parse needs (the model label in the header, a
- * sources panel drawn in a side sheet).
+ * sources panel drawn outside it, in a side sheet.
  *
- * It is wrapped in one element recording the page URL, the assistant and the
- * language, so a snapshot re-parses on its own: `npm run reparse`.
+ * It is wrapped in one element recording the page URL, the assistant, the
+ * language and the model label, so a snapshot re-parses on its own:
+ * `npm run reparse`. The label is recorded rather than copied: Claude and
+ * Gemini draw it inside the composer, which is private, and a button cut out
+ * of its composer no longer matches the selector that found it — the first
+ * real Claude capture re-parsed with no model at all.
  */
 import type { Assistant } from '../types/answer';
 import { GENERIC, PARSER_VERSION, type SiteSelectors } from './selectors';
@@ -22,9 +25,11 @@ export interface SnapshotInput {
   assistant: Assistant;
   site: SiteSelectors;
   language?: string;
+  /** The model label read from the live page. */
+  model?: string;
   lastUser: Element | null;
   answerTurn: Element | null;
-  /** Elements a re-parse needs that may sit outside the conversation: model label, sources panels. */
+  /** Elements a re-parse needs that may sit outside the conversation: sources panels. */
   extras: Element[];
 }
 
@@ -59,7 +64,8 @@ export function snapshot(doc: Document, input: SnapshotInput, maxBytes: number):
     const parts = [...outside, root].map((e) => serialise(e, remove)).join('\n');
     return (
       `<div data-answer-reader-snapshot="1" data-url="${attr(input.pageUrl)}" data-assistant="${input.assistant}"` +
-      ` data-lang="${attr(input.language ?? '')}" data-parser-version="${PARSER_VERSION}">\n${parts}\n</div>`
+      ` data-lang="${attr(input.language ?? '')}" data-model="${attr(input.model ?? '')}"` +
+      ` data-parser-version="${PARSER_VERSION}">\n${parts}\n</div>`
     );
   };
 

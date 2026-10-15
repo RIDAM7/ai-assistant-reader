@@ -154,6 +154,8 @@ export function blockText(el: Element | null | undefined, remove: string[]): str
     const tag = (node as Element).tagName.toUpperCase();
     const block = BLOCK.has(tag);
     if (block) out.push('\n');
+    // A table row stays one line, its cells apart: "Format | Live online classes".
+    if ((tag === 'TD' || tag === 'TH') && (node as Element).previousElementSibling) out.push(' | ');
     if (tag === 'A' && wordEnd.test(out[out.length - 1] ?? '')) out.push(' ');
     node.childNodes.forEach(walk);
     if (tag === 'A') afterLink = true;
@@ -235,6 +237,13 @@ const APP_HOSTS: Record<Assistant, RegExp[]> = {
   chatgpt: [/^(chatgpt\.com|chat\.openai\.com|auth\.openai\.com)$/i],
   perplexity: [/(^|\.)perplexity\.ai$/i],
   claude: [/^claude\.ai$/i],
+  gemini: [
+    /^gemini.google.com$/i,
+    /^(www.)?google.[a-z.]+$/i, // "search for this" links back into Google
+    /^(accounts|policies|myaccount|myactivity|support).google.[a-z.]+$/i,
+    /(^|.)gstatic.com$/i,
+    /(^|.)googleusercontent.com$/i,
+  ],
   google_ai_mode: [
     /^(www\.)?google\.[a-z.]+$/i, // the search host itself
     /^(accounts|policies|myaccount|myactivity|maps)\.google\.[a-z.]+$/i,

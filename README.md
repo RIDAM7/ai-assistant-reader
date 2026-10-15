@@ -1,8 +1,8 @@
 # Answer Reader
 
 A local Chrome extension that reads the AI assistant answer **you already have
-open** and stores it, for GEO citation tracking. ChatGPT, Perplexity, Claude and
-the AI Mode tab of Google. No API, no server, no keys, no cost.
+open** and stores it, for GEO citation tracking. ChatGPT, Perplexity, Claude,
+Gemini and the AI Mode tab of Google search. No API, no server, no keys, no cost.
 
 It is the assistant counterpart of [SERP Reader](https://github.com/RIDAM7/SERP-Reader):
 same stack, same principles. It does not ask anything. You type the question,
@@ -39,9 +39,11 @@ Incognito**.
 Once a month, the same questions to every assistant (the research repository's
 `sites/<domain>/serps/assistant-questions.md` holds the sheet):
 
-1. Open a fresh chat: ChatGPT in a temporary chat, Claude in a new chat outside
-   any project, Perplexity logged out, Google AI Mode in an Incognito window.
-   Web search on wherever the assistant offers it.
+1. Open a fresh chat: ChatGPT in a **temporary chat** (otherwise its memory
+   writes your own background into the answer — the first real capture did),
+   Claude in a new chat outside any project, Perplexity logged out, Gemini in a
+   new chat, Google AI Mode in an Incognito window. Web search on wherever the
+   assistant offers it.
 2. Paste the question exactly as written. Ask nothing else in between.
 3. Wait until the answer has finished, then press **Collect** — the floating
    panel on the page or the toolbar popup. Both run the same code.
@@ -51,9 +53,10 @@ Then **Export all** and file the three files under
 `sites/<domain>/answers/<YYYY-MM>/` in the research repository, where
 `npm run answers -- --site <domain>` reads them.
 
-On Google the extension runs only on the AI Mode tab (`udm=50` in the URL). A
-plain results page belongs to SERP Reader, so one page never carries two
-Collect buttons.
+On google.com the extension runs only on the AI Mode tab (`udm=50` in the
+URL). A plain results page belongs to SERP Reader, so one page never carries two
+Collect buttons. Gemini is a different app, at gemini.google.com, and is read
+there.
 
 ---
 
@@ -203,10 +206,14 @@ change — read the diff it prints first.
 
 ## Known limitations
 
-- **Three of four selector blocks are unverified.** ChatGPT, Perplexity and
-  Claude were written from what those apps shipped through mid-2026. Until a
-  real capture of each is imported, assume the generic layer is doing part of
-  the work, and read `diagnostics.layers`.
+- **Gemini's selectors are unverified.** ChatGPT, Perplexity and Claude were
+  tuned on one real answer each (2026-10-15); all three had changed from what
+  the first version assumed, and the first capture of each showed it. Gemini is
+  written from the app's element names; until a real capture is imported,
+  read `diagnostics.layers` on its captures.
+- **ChatGPT's model is not read.** Its per-message model id is gone and the
+  picker sits outside the conversation; no selector matched on the first
+  capture. Perplexity shows no answering model at all.
 - **Google AI Mode's question bubble is not known yet.** The reply's own heading
   ("AI Mode reply for <query>") or `q=` stands in.
 - **"Unfinished" is a warning, not a refusal.** The streaming markers are

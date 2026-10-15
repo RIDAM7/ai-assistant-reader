@@ -48,5 +48,5 @@ chrome.runtime.onMessage.addListener((msg: BackgroundRequest, _sender, sendRespo
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.info('[Answer Reader] installed. Open an answer in ChatGPT, Perplexity, Claude or Google AI Mode and press Collect.');
+  console.info('[Answer Reader] installed. Open an answer in ChatGPT, Perplexity, Claude, Gemini or Google AI Mode and press Collect.');
 });

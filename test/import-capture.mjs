@@ -43,9 +43,18 @@ for (const a of answers) {
     skipped++;
     continue;
   }
-  const base = `real-${a.metadata.assistant}-${slug(a.metadata.question)}`;
-  writeFileSync(join(FIXTURES, `${base}.html`), a.rawHtml);
-  const parsed = collectAnswer(parseHTML(a.rawHtml).document, a.metadata.url, { assistant: a.metadata.assistant });
+  /*
+   * The fixture is the snapshot taken again with TODAY's privacy rules, not the
+   * export's copy. A capture made by an older version keeps whatever that
+   * version failed to strip: the first Claude export carried the linked
+   * computer's name from the chat header, and a fixture is committed.
+   */
+  const resnap = collectAnswer(parseHTML(a.rawHtml).document, a.metadata.url, { assistant: a.metadata.assistant, includeRawHtml: true });
+  const html = resnap.rawHtml ?? a.rawHtml;
+  // Named from today's reading of the question: an older export may have missed it.
+  const base = `real-${a.metadata.assistant}-${slug(resnap.metadata.question || a.metadata.question)}`;
+  writeFileSync(join(FIXTURES, `${base}.html`), html);
+  const parsed = collectAnswer(parseHTML(html).document, a.metadata.url, { assistant: a.metadata.assistant });
   const expected = {
     origin: `Answer Reader capture, from ${basename(input)}`,
     capturedAt: a.collectedAt,

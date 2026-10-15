@@ -1,0 +1,29 @@
+{
+  "origin": "Answer Reader capture, from answers-2026-10-15.json",
+  "capturedAt": "2026-10-15T09:49:45.999Z",
+  "url": "https://claude.ai/chat/add95a8c-4657-49c6-8880-288d8178a038",
+  "assistant": "claude",
+  "parserVersion": "1.1.0",
+  "question": "Which is the best AI engineering course or bootcamp in India for freshers, with live classes?",
+  "model": null,
+  "webSources": true,
+  "answerNonEmpty": true,
+  "linkCount": 6,
+  "linkDomains": [
+    "logicmojo.com",
+    "futurense.com",
+    "masaischool.com",
+    "logicmojo.com",
+    "logicmojo.com",
+    "shifttotech.co.in"
+  ],
+  "sourceCount": 0,
+  "sourceDomains": [],
+  "layers": {
+    "question": "site",
+    "answer": "site",
+    "links": "site",
+    "sources": "none",
+    "model": "none"
+  }
+}

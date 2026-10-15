@@ -51,7 +51,7 @@ chrome.runtime.onMessage.addListener((msg: ContentRequest, _sender, sendResponse
       return {
         ok: false,
         code: 'NOT_SUPPORTED',
-        error: 'Not an assistant answer page. Google is read on its AI Mode tab only (udm=50).',
+        error: 'Not an assistant answer page. Google search is read on its AI Mode tab only (udm=50); Gemini at gemini.google.com.',
       };
     }
     if (msg.type === 'PREVIEW') return { ok: true, type: 'PREVIEW', ...preview() };

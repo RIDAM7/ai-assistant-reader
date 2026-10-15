@@ -49,7 +49,7 @@ async function toContent(msg: unknown): Promise<ContentResponse> {
      * or Google, or it was open before the extension was loaded and needs one
      * refresh.
      */
-    throw new Error('No Answer Reader on this tab. Open ChatGPT, Perplexity, Claude or Google AI Mode, then reload it once.');
+    throw new Error('No Answer Reader on this tab. Open ChatGPT, Perplexity, Claude, Gemini or Google AI Mode, then reload it once.');
   }
 }
 

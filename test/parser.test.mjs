@@ -14,7 +14,7 @@ import { parseHTML } from 'linkedom';
 
 import { collectAnswer, detectAssistant } from './.parser.mjs';
 import { answersCsv, answersJson, citationsCsv } from './.export.mjs';
-import { CHATGPT_ANSWER, QUESTION, URLS, chatgptPage, claudePage, perplexityPage } from './fixtures.mjs';
+import { CHATGPT_ANSWER, QUESTION, URLS, chatgptPage, claudePage, geminiPage, perplexityPage } from './fixtures.mjs';
 
 const parse = (html) => parseHTML(html).document;
 const collect = (html, url, opts = {}) => collectAnswer(parse(html), url, opts);
@@ -26,6 +26,7 @@ test('recognises the four assistants, and Google only on its AI Mode tab', () =>
   assert.equal(detectAssistant('https://chat.openai.com/'), 'chatgpt');
   assert.equal(detectAssistant('https://www.perplexity.ai/search/x'), 'perplexity');
   assert.equal(detectAssistant('https://claude.ai/new'), 'claude');
+  assert.equal(detectAssistant('https://gemini.google.com/app/e18b1d6c7596d509?hl=en-IN'), 'gemini');
   assert.equal(detectAssistant('https://www.google.com/search?q=x&udm=50'), 'google_ai_mode');
   assert.equal(detectAssistant('https://www.google.co.in/search?udm=50&q=x'), 'google_ai_mode');
   // A plain results page is SERP Reader's. Two Collect buttons on one SERP is a mistake waiting to happen.
@@ -139,7 +140,7 @@ test('the snapshot holds the conversation and nothing private', () => {
   assert.doesNotMatch(raw, /half-typed draft/, 'the composer draft was kept');
   assert.doesNotMatch(raw, /Person Name/, 'the account button was kept');
   // ...and what a re-parse needs from outside the conversation is there.
-  assert.match(raw, /model-switcher-dropdown-button/);
+  assert.match(raw, /data-model="gpt-5"/, 'the model label is recorded on the wrapper');
   assert.match(raw, /Scaler/);
 });
 
@@ -300,4 +301,65 @@ test('citations CSV: one row per panel source and per answer link, kind says whi
   assert.equal(rows.filter((r) => r.includes(',source,')).length, 1);
   assert.equal(rows.filter((r) => r.includes(',link,')).length, 2);
   assert.ok(rows.some((r) => r.includes(',link,2,codingninjas,https://www.codingninjas.com/courses,codingninjas.com,,2,')));
+});
+
+/* ------------------------------------------- lessons of the first real captures */
+
+test('a brand drawn as <span role="button"> stays in the answer', () => {
+  // ChatGPT draws every programme it recommends as an interactive entity. The
+  // first real capture read "1.  — AI Engineering Bootcamp": Codebasics, IIT
+  // Patna and Dinesh AI Academy all removed as if they were buttons.
+  const answer = '<h2>1. <span role="button" tabindex="0"><span>Codebasics</span></span> — AI Engineering Bootcamp</h2><p>Live online.</p><button>Copy</button>';
+  const d = collect(chatgptPage({ turns: [[QUESTION, answer]] }), URLS.chatgpt);
+  assert.match(d.answer, /1\. Codebasics — AI Engineering Bootcamp/);
+  assert.doesNotMatch(d.answer, /Copy/, 'a real button is still chrome');
+});
+
+test('a table keeps one row per line with its cells apart', () => {
+  const answer = '<table><tr><th>Factor</th><th>What it offers</th></tr><tr><td>Format</td><td>Live online classes</td></tr></table>';
+  const d = collect(chatgptPage({ turns: [[QUESTION, answer]] }), URLS.chatgpt);
+  assert.deepEqual(d.answer.split('\n'), ['Factor | What it offers', 'Format | Live online classes']);
+});
+
+test('a picker that names no model is not a model', () => {
+  assert.equal(collect(chatgptPage({ modelSlug: null, header: 'Model' }), URLS.chatgpt).metadata.model, undefined);
+});
+
+test('the model label survives the snapshot when the composer around it does not', () => {
+  // Claude and Gemini draw the label in the composer, which is private; the
+  // first real Claude capture re-parsed with no model at all.
+  const html = claudePage().replace('<fieldset>', '<fieldset><button data-testid="model-selector-dropdown">Sonnet 5.5 Medium</button>');
+  const withoutHeader = html.replace(/<header>[\s\S]*?<\/header>/, '');
+  const live = collectAnswer(parse(withoutHeader), URLS.claude, { includeRawHtml: true });
+  assert.equal(live.metadata.model, 'Sonnet 5.5 Medium');
+  assert.doesNotMatch(live.rawHtml, /a draft/, 'the composer itself was kept');
+  assert.equal(collectAnswer(parse(live.rawHtml), URLS.claude).metadata.model, 'Sonnet 5.5 Medium');
+});
+
+test("Claude's chat header never reaches the snapshot: it names the linked computer", () => {
+  const html = claudePage().replace(
+    '<main>',
+    '<main><div data-testid="chat-header"><button data-testid="cowork-computer-link-indicator" aria-label="PERSONS_PC, Asleep or app closed"></button></div>',
+  );
+  const d = collectAnswer(parse(html), URLS.claude, { includeRawHtml: true });
+  assert.doesNotMatch(d.rawHtml, /PERSONS_PC/);
+});
+
+test('ChatGPT: a turn not yet "complete" is flagged as still writing', () => {
+  const html = chatgptPage().replace('<article data-testid="conversation-turn-2">', '<article data-testid="conversation-turn-2" data-talvt-turn-state="streaming">');
+  assert.equal(collect(html, URLS.chatgpt).diagnostics.streaming, true);
+});
+
+test('Gemini: question, answer, model, links; the sidebar and composer stay out of the snapshot', () => {
+  const d = collectAnswer(parse(geminiPage()), URLS.gemini, { includeRawHtml: true });
+  assert.equal(d.metadata.assistant, 'gemini');
+  assert.equal(d.metadata.question, QUESTION);
+  assert.equal(d.metadata.model, 'Flash');
+  assert.equal(d.metadata.conversationId, 'e18b1d6c7596d509');
+  assert.equal(d.diagnostics.layers.answer, 'site');
+  assert.match(d.answer, /AlmaBetter \| Live online cohorts/);
+  assert.doesNotMatch(d.answer, /ANI News/, 'a source chip is a citation, not prose');
+  assert.deepEqual(d.links.map((l) => l.domain), ['almabetter.com'], 'a link back into Google search is not a citation');
+  assert.doesNotMatch(d.rawHtml, /Pizza Tower|Person Name|a draft/);
+  assert.equal(collectAnswer(parse(d.rawHtml), URLS.gemini).metadata.model, 'Flash');
 });
