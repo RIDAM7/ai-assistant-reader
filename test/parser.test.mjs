@@ -61,6 +61,22 @@ test('the answer keeps its lines: list items do not run into each other', () => 
   assert.ok(lines.some((l) => l.startsWith('Coding Ninjas')), d.answer);
 });
 
+test('a citation pill is a link, not prose: its label stays out of the answer text', () => {
+  // Brand counts read the text. A pill reading "codingninjas" is a citation,
+  // already in links; counted as prose it would say the answer *named* Coding
+  // Ninjas when it only cited it. And a pill glued to the word before it read
+  // "engineersbosscoder" on the first end-to-end run.
+  const chat = collect(chatgptPage(), URLS.chatgpt);
+  assert.doesNotMatch(chat.answer, /scaler\.com|codingninjas\b/, chat.answer);
+  assert.ok(chat.links.some((l) => l.anchorText === 'codingninjas'), 'the pill is still a link');
+  const pplx = collect(perplexityPage(), URLS.perplexity);
+  assert.doesNotMatch(pplx.answer, /geeksforgeeks \+2|bosscoder\b/, pplx.answer);
+  assert.match(pplx.answer, /working engineers\./);
+  // An ordinary inline link keeps its words, apart from its neighbours.
+  const glued = collect(chatgptPage({ turns: [[QUESTION, '<p>Read the<a href="https://www.geekster.in/">Geekster</a>guide.</p>']] }), URLS.chatgpt);
+  assert.match(glued.answer, /Read the Geekster guide\./);
+});
+
 test('links: in order, one per destination with a count, the tracking tag off, the app itself left out', () => {
   const d = collect(chatgptPage(), URLS.chatgpt);
   assert.deepEqual(d.links.map((l) => l.domain), ['scaler.com', 'codingninjas.com']);

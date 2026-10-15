@@ -36,7 +36,11 @@ export interface SiteSelectors {
   turnScope: string[];
   /** Inside an assistant turn: the answer's own body. The turn itself when none matches. */
   answerBody: string[];
-  /** Inside the answer: UI that is not answer — removed from the text, never from the links. */
+  /**
+   * Inside the answer: what is not the answer's prose — removed from the text, never from the links.
+   * Citation pills belong here: a pill is a citation, read into `links`, and its label ("codingninjas",
+   * "geeksforgeeks +2") is not the answer naming a brand. Brand counts read the text.
+   */
   answerNoise: string[];
   /** Inside a user turn: the question's own text. The turn itself when none matches. */
   questionText: string[];
@@ -98,7 +102,7 @@ export const CHATGPT: SiteSelectors = {
   assistantTurn: ['[data-message-author-role="assistant"]'],
   turnScope: ['article', '[data-testid^="conversation-turn-"]'],
   answerBody: ['.markdown', '[class*="markdown"]'],
-  answerNoise: [],
+  answerNoise: ['[data-testid="webpage-citation-pill"]'],
   questionText: ['.whitespace-pre-wrap', '[data-message-content]'],
   model: ['[data-testid="model-switcher-dropdown-button"]', 'button[aria-label^="Model selector" i]'],
   modelAttributes: ['data-message-model-slug'],
@@ -119,7 +123,7 @@ export const PERPLEXITY: SiteSelectors = {
   assistantTurn: ['[id^="markdown-content-"]', 'div[class*="prose"]'],
   turnScope: ['[data-testid*="thread-entry" i]', 'div[class*="group/thread"]'],
   answerBody: ['.prose', '[class*="prose"]'],
-  answerNoise: [],
+  answerNoise: ['a.citation', 'span.citation'],
   questionText: [],
   model: ['[data-testid*="model-name" i]', 'button[aria-label*="model" i]'],
   modelAttributes: [],

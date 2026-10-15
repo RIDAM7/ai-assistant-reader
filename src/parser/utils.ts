@@ -138,15 +138,25 @@ export function blockText(el: Element | null | undefined, remove: string[]): str
   if (!el) return '';
   const root = cleanClone(el, remove);
   const out: string[] = [];
+  // A link is its own word: "engineers<a>bosscoder</a>" must not read as one.
+  const wordEnd = /[\p{L}\p{N}]$/u;
+  const wordStart = /^[\p{L}\p{N}]/u;
+  let afterLink = false;
   const walk = (node: Node) => {
     if (node.nodeType === 3) {
-      out.push((node.textContent ?? '').replace(/\s+/g, ' '));
+      const t = (node.textContent ?? '').replace(/\s+/g, ' ');
+      if (afterLink && wordStart.test(t)) out.push(' ');
+      if (t) afterLink = false;
+      out.push(t);
       return;
     }
     if (node.nodeType !== 1) return;
-    const block = BLOCK.has((node as Element).tagName.toUpperCase());
+    const tag = (node as Element).tagName.toUpperCase();
+    const block = BLOCK.has(tag);
     if (block) out.push('\n');
+    if (tag === 'A' && wordEnd.test(out[out.length - 1] ?? '')) out.push(' ');
     node.childNodes.forEach(walk);
+    if (tag === 'A') afterLink = true;
     if (block) out.push('\n');
   };
   walk(root);

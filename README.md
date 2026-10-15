@@ -63,7 +63,7 @@ Collect buttons.
 | --- | --- |
 | **Assistant and page** | Which of the four, the page URL, the conversation id when the URL carries one, `<html lang>` |
 | **Question** | The last user turn, as the page shows it |
-| **Answer** | The last assistant turn's text, with its paragraphs and list items on their own lines |
+| **Answer** | The last assistant turn's text, with its paragraphs and list items on their own lines. Citation pills are left out: a pill is a citation, already in the links, and counting its label as prose would say the answer *named* a brand it only cited |
 | **Links in the answer** | In order of first appearance: href, destination URL, domain, anchor text, and how many times the answer links it |
 | **Sources panel** | The assistant's sources or citations list, in its order: title, URL, domain, and the publisher name a card shows |
 | **Web sources** | Whether any appear at all: a link out, a sources panel, or the assistant's own "searched the web" line. *No* is a finding: the answer came from the model alone |
