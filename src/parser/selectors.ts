@@ -28,7 +28,7 @@
  * broader one that matches its children.
  */
 
-export const PARSER_VERSION = '1.4.0';
+export const PARSER_VERSION = '1.4.1';
 
 export interface SiteSelectors {
   /** The conversation's container: the snapshot's root. Must hold the last answer to be used. */

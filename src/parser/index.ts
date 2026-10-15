@@ -116,8 +116,9 @@ export function collectAnswer(doc: Document, pageUrl: string, opts: CollectOptio
   }
   if (assistant === 'gemini') {
     // The first real Gemini capture read "You said <the question clipped>… <the question>": a screen-reader
-    // label and a preview ahead of the question itself. Written from the exported text; the snapshot had no turn.
-    question = question.replace(/^You said\s+/i, '').replace(/^(.{8,}?)…\s*(?=\1)/s, '');
+    // label and a preview ahead of the question itself. A question short enough not to clip is previewed
+    // whole, and read "<the question> <the question>": 11 of the 12 of 2026-10-15.
+    question = question.replace(/^You said\s+/i, '').replace(/^(.{8,}?)…\s*(?=\1)/s, '').replace(/^(.{8,}?)\s+\1$/s, '$1');
   }
   if (!question && assistant === 'google_ai_mode') {
     // "AI Mode reply for <query>": the reply names its own question.

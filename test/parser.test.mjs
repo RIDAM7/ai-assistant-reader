@@ -495,3 +495,11 @@ test("Gemini: the person's profile picture never reaches the snapshot", () => {
   assert.doesNotMatch(raw, /person-photo|profile picture/);
   assert.match(raw, /query-text-line/);
 });
+
+test('Gemini: a question short enough to preview whole is not read twice', () => {
+  const html = geminiPage().replace(
+    '<div class="query-text"><p class="query-text-line">',
+    `<span class="cdk-visually-hidden">You said</span> <span class="preview">${QUESTION}</span> <div><p>`,
+  );
+  assert.equal(collectAnswer(parse(html), URLS.gemini).metadata.question, QUESTION);
+});
