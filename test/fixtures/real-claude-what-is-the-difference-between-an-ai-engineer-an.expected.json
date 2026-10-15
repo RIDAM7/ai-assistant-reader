@@ -1,0 +1,22 @@
+{
+  "origin": "Answer Reader capture, from answers-2026-10-15.json",
+  "capturedAt": "2026-10-15T14:32:45.852Z",
+  "url": "https://claude.ai/chat/1a589a7f-f088-4dea-87e8-52f535e93936",
+  "assistant": "claude",
+  "parserVersion": "1.3.0",
+  "question": "What is the difference between an AI engineer and an ML engineer, and which should a fresher in India choose?",
+  "model": "Sonnet 5.5 Medium",
+  "webSources": false,
+  "answerNonEmpty": true,
+  "linkCount": 0,
+  "linkDomains": [],
+  "sourceCount": 0,
+  "sourceDomains": [],
+  "layers": {
+    "question": "site",
+    "answer": "site",
+    "links": "none",
+    "sources": "none",
+    "model": "site"
+  }
+}

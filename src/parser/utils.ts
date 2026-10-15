@@ -155,6 +155,8 @@ export function blockText(el: Element | null | undefined, remove: string[]): str
   const wordEnd = /[\p{L}\p{N}]$/u;
   const wordStart = /^[\p{L}\p{N}]/u;
   let afterLink = false;
+  // Inside a table cell a block is a word break, not a line: ChatGPT wraps every cell's text in a <p>.
+  let inCell = 0;
   const walk = (node: Node) => {
     if (node.nodeType === 3) {
       const t = (node.textContent ?? '').replace(/\s+/g, ' ');
@@ -166,19 +168,22 @@ export function blockText(el: Element | null | undefined, remove: string[]): str
     if (node.nodeType !== 1) return;
     const tag = (node as Element).tagName.toUpperCase();
     const block = BLOCK.has(tag);
-    if (block) out.push('\n');
+    const cell = tag === 'TD' || tag === 'TH';
+    if (block) out.push(inCell ? ' ' : '\n');
     // A table row stays one line, its cells apart: "Format | Live online classes".
-    if ((tag === 'TD' || tag === 'TH') && (node as Element).previousElementSibling) out.push(' | ');
+    if (cell && (node as Element).previousElementSibling) out.push(' | ');
     if (tag === 'A' && wordEnd.test(out[out.length - 1] ?? '')) out.push(' ');
+    if (cell) inCell++;
     node.childNodes.forEach(walk);
+    if (cell) inCell--;
     if (tag === 'A') afterLink = true;
-    if (block) out.push('\n');
+    if (block) out.push(inCell ? ' ' : '\n');
   };
   walk(root);
   return out
     .join('')
     .split('\n')
-    .map((l) => l.trim())
+    .map((l) => l.replace(/ {2,}/g, ' ').trim())
     .join('\n')
     .replace(/\n{2,}/g, '\n')
     .trim();

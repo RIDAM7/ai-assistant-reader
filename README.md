@@ -85,6 +85,14 @@ Two things are deliberately left as they are rather than tidied:
   domain is never guessed from a title or a site name.
 - **ChatGPT tags every citation `utm_source=chatgpt.com`.** `url` drops that tag,
   `href` keeps the page's value.
+- **Some citations have no anchor.** From the second round of real captures
+  (2026-10-15), a ChatGPT pill shows its source's favicon and name ("Bright
+  Infonet +1") and links to nothing until clicked, and a Perplexity citation
+  carries its page in `data-pplx-citation-url`. Both are read into `links`.
+  Perplexity's is the page; ChatGPT's is the site alone, recorded as its origin
+  with `urlIsOrigin: true` and joined to the answer's link to that site when
+  there is one. The `+1` is in `anchorText`: the further sources it hides are
+  not in the page.
 
 ---
 
@@ -161,7 +169,12 @@ menu with their name and email, a draft in the composer, inline scripts holding
 session state. The snapshot is the element holding the conversation (never
 `<body>`), copied with scripts, `nav`, the composer, inputs and each site's
 account elements removed, plus the few elements outside it a re-parse needs (the
-model label, a sources panel in a side sheet). It is wrapped in one element
+model label, a sources panel in a side sheet). A root whose private parts hold
+the question or the answer is passed over for the last question-and-answer
+pair: the first real Gemini capture kept its `<main>` with nothing in it but a
+sidebar button. Email addresses in comments and attribute values become
+`[email]`: Google's AI Mode tab keeps the signed-in account's address in the
+inline data of its suggestions. One the answer prints stays. It is wrapped in one element
 recording the URL, assistant and language, so it re-parses on its own:
 
 ```bash
@@ -209,15 +222,20 @@ change — read the diff it prints first.
 ## Known limitations
 
 - **Gemini's selectors are unverified.** ChatGPT, Perplexity and Claude were
-  tuned on one real answer each (2026-10-15); all three had changed from what
-  the first version assumed, and the first capture of each showed it. Gemini is
-  written from the app's element names; until a real capture is imported,
-  read `diagnostics.layers` on its captures.
+  tuned on real answers (2026-10-15); all three had changed from what the first
+  version assumed, and ChatGPT and Perplexity changed again within the day.
+  Gemini's first capture kept no conversation in its snapshot (fixed in 1.3.0)
+  and read its question as "You said <preview>… <question>", which is cleaned
+  from the text alone. Until a real Gemini capture is imported, read
+  `diagnostics.layers` on its captures.
 - **ChatGPT's model is not read.** Its per-message model id is gone and the
   picker sits outside the conversation; no selector matched on the first
   capture. Perplexity shows no answering model at all.
 - **Google AI Mode's question bubble is not known yet.** The reply's own heading
-  ("AI Mode reply for <query>") or `q=` stands in.
+  ("AI Mode reply for <query>") or `q=` stands in. On the AI Mode tab the
+  disclaimer, copy and share controls, share dialog, feedback form and the
+  right-hand card column are each site's `chrome`: out of the text and the
+  links, while the cards are still read as sources.
 - **"Unfinished" is a warning, not a refusal.** The streaming markers are
   selectors too; a stale one that always matched would block every capture.
   The capture is saved and flagged, and the panel says so.

@@ -84,7 +84,8 @@ export function collectAnswer(doc: Document, pageUrl: string, opts: CollectOptio
 
   /* ------------------------------------------------------- answer, links */
 
-  const textNoise = [...GENERIC.textNoise, ...site.answerNoise, ...site.sources.panels];
+  const textNoise = [...GENERIC.textNoise, ...site.answerNoise, ...site.chrome, ...site.sources.panels];
+  const chrome = turns.answer ? pickAll(turns.answer, site.chrome) : [];
   const answer = safely('answer text', warnings, () => blockText(turns.answer, textNoise), '');
 
   // A Google /goto in the answer carries no destination; the source card with the same href does.
@@ -97,8 +98,9 @@ export function collectAnswer(doc: Document, pageUrl: string, opts: CollectOptio
           extractLinks(turns.answer!, {
             pageUrl,
             assistant,
-            skip: panels,
+            skip: [...panels, ...chrome],
             redirectDomain: (a, r) => cardDomain.get(r.href) ?? domainFromMarkup(a),
+            unlinked: site.unlinkedCitations,
           }),
         [],
       )
@@ -111,6 +113,11 @@ export function collectAnswer(doc: Document, pageUrl: string, opts: CollectOptio
   if (turns.lastUser) {
     question = text(pick(turns.lastUser, site.questionText) ?? turns.lastUser, GENERIC.textNoise);
     questionLayer = turns.layer;
+  }
+  if (assistant === 'gemini') {
+    // The first real Gemini capture read "You said <the question clipped>… <the question>": a screen-reader
+    // label and a preview ahead of the question itself. Written from the exported text; the snapshot had no turn.
+    question = question.replace(/^You said\s+/i, '').replace(/^(.{8,}?)…\s*(?=\1)/s, '');
   }
   if (!question && assistant === 'google_ai_mode') {
     // "AI Mode reply for <query>": the reply names its own question.

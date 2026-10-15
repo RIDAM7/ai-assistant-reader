@@ -387,3 +387,92 @@ test('Gemini: question, answer, model, links; the sidebar and composer stay out 
   assert.doesNotMatch(d.rawHtml, /Pizza Tower|Person Name|a draft/);
   assert.equal(collectAnswer(parse(d.rawHtml), URLS.gemini).metadata.model, 'Flash');
 });
+
+/* ------------------------------------------- the second round of real captures, 2026-10-15 */
+
+const real = (name) => {
+  const doc = parse(readFileSync(`test/fixtures/real-${name}.html`, 'utf8'));
+  return collectAnswer(doc, doc.querySelector('[data-answer-reader-snapshot]').getAttribute('data-url'));
+};
+const Q1 = 'what-is-the-difference-between-an-ai-engineer-an';
+
+test("ChatGPT: a pill with no anchor is a citation of the site its favicon names, and not the answer's prose", () => {
+  const d = real(`chatgpt-${Q1}`);
+  assert.equal(d.metadata.webSources, true);
+  assert.deepEqual(d.links.map((l) => [l.domain, l.count, l.urlIsOrigin]), [['brightinfonet.com', 2, true], ['naukri.com', 1, true]]);
+  assert.equal(d.links[0].anchorText, 'Bright Infonet +1');
+  assert.equal(d.links[0].url, 'https://brightinfonet.com/', 'the site, never a guessed page');
+  assert.doesNotMatch(d.answer, /Bright Infonet|^\+1$/m);
+});
+
+test("ChatGPT: a table cell's paragraphs stay on its row", () => {
+  const d = real(`chatgpt-${Q1}`);
+  assert.match(d.answer, /^Factor \| AI Engineer \| ML Engineer$/m);
+  assert.match(d.answer, /^Fresher, 0–2 years \| ₹4–10 LPA \| ₹4–9 LPA$/m);
+  assert.doesNotMatch(d.answer, /^\|$/m);
+});
+
+test('ChatGPT: a pill naming the site of a link the answer already has joins that link', () => {
+  const d = real('chatgpt-which-is-the-best-ai-engineering-course-or-bootc');
+  assert.deepEqual(d.links.map((l) => [l.domain, l.count, Boolean(l.urlIsOrigin)]), [
+    ['codebasics.io', 2, false], ['iitpatna.com', 2, false], ['store.dineshaiacademy.com', 2, false], ['iitd.emeritus.org', 2, false],
+  ]);
+  // A badge without a favicon is a button or a brand, and stays where it was.
+  assert.match(d.answer, /My first choice/);
+});
+
+test("Perplexity: a citation with no anchor is read from its data-pplx-citation-url", () => {
+  const d = real(`perplexity-${Q1}`);
+  assert.deepEqual(d.links.map((l) => [l.domain, l.count]), [['online.iitkgp.ac.in', 6], ['naukri.com', 1], ['shooliniuniversity.com', 1]]);
+  assert.match(d.links[0].url, /^https:\/\/online\.iitkgp\.ac\.in\/blog\/ai-engineer-vs-ml-engineer/);
+  assert.match(d.answer, /^Aspect \| AI Engineer \| ML Engineer$/m);
+});
+
+test("Google AI Mode tab: the answer ends where the reply does; the share, feedback and help links are not it", () => {
+  const d = real(`google_ai_mode-${Q1}`);
+  assert.match(d.answer, /analyzing datasets and formulas\?$/);
+  assert.doesNotMatch(d.answer, /AI can make mistakes|Share public link|Good response|Thanks for letting us know|Show all|0 files/);
+  assert.ok(!d.links.some((l) => l.domain === 'support.google.com'), 'a help link from the feedback form was read as a citation');
+  assert.equal(d.links.length, 8);
+  assert.equal(d.sources.length, 14, 'the right-hand column is chrome to the text, and still the sources');
+});
+
+test('the snapshot never keeps a root whose private parts hold the answer: it falls back to the turn', () => {
+  // The first real Gemini capture kept <main> and nothing in it but a sidebar button: a private element held the conversation.
+  const html = `<!doctype html><html lang="en"><body><main class="chat-app">
+    <div class="side-nav-menu-button"><a href="/">New chat</a></div>
+    <side-navigation-v2>
+      <bard-sidenav><a href="/app/older">Pizza Tower Next to Jenga</a></bard-sidenav>
+      <div class="content"><div class="conversation-container">
+        <user-query><div class="query-text"><p class="query-text-line">${QUESTION}</p></div></user-query>
+        <model-response><message-content><div class="markdown"><p>For freshers, live cohorts with projects matter most.</p></div></message-content></model-response>
+      </div></div>
+    </side-navigation-v2></main></body></html>`;
+  const d = collectAnswer(parse(html), URLS.gemini, { includeRawHtml: true });
+  assert.equal(d.diagnostics.snapshot, 'last turn');
+  assert.match(d.rawHtml, /live cohorts with projects/);
+  assert.doesNotMatch(d.rawHtml, /Pizza Tower/);
+  assert.equal(collectAnswer(parse(d.rawHtml), URLS.gemini).metadata.question, QUESTION);
+});
+
+test('Gemini: the "You said" label and the clipped preview are not the question', () => {
+  const clipped = `${QUESTION.slice(0, 60)}…`;
+  const html = geminiPage().replace(
+    '<div class="query-text">',
+    `<span class="cdk-visually-hidden">You said</span> <span class="preview">${clipped}</span> <div class="query-text">`,
+  ).replace('<div class="query-text"><p class="query-text-line">', '<div><p>');
+  // Neither question selector matches, so the whole user turn is read, label and preview with it.
+  assert.ok(QUESTION.length > 60);
+  assert.equal(collectAnswer(parse(html), URLS.gemini).metadata.question, QUESTION);
+});
+
+test('the snapshot keeps no email address a reader never sees, and every one the answer prints', () => {
+  // Google's AI Mode tab put the signed-in account's address in comments, 20 times on its first capture.
+  const html = chatgptPage({
+    turns: [[QUESTION, '<p>Write to admissions@institute.example for a brochure.</p><!--[null,0,null,null,"person@gmail.com"]--><span data-x="person@gmail.com">.</span>']],
+  });
+  const raw = collectAnswer(parse(html), URLS.chatgpt, { includeRawHtml: true }).rawHtml;
+  assert.doesNotMatch(raw, /person@gmail\.com/);
+  assert.match(raw, /admissions@institute\.example/);
+  assert.match(raw, /\[email\]/);
+});

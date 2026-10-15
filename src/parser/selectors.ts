@@ -28,7 +28,7 @@
  * broader one that matches its children.
  */
 
-export const PARSER_VERSION = '1.2.0';
+export const PARSER_VERSION = '1.3.0';
 
 export interface SiteSelectors {
   /** The conversation's container: the snapshot's root. Must hold the last answer to be used. */
@@ -45,6 +45,11 @@ export interface SiteSelectors {
    * "geeksforgeeks +2") is not the answer naming a brand. Brand counts read the text.
    */
   answerNoise: string[];
+  /**
+   * Inside the turn: the page's own controls, never the answer. Removed from the text and from the
+   * links both: Google's share dialog and feedback block carry links to its help pages.
+   */
+  chrome: string[];
   /** Inside a user turn: the question's own text. The turn itself when none matches. */
   questionText: string[];
   /** A visible model label: the header's model picker. */
@@ -65,6 +70,12 @@ export interface SiteSelectors {
      */
     records: string[];
   };
+  /**
+   * Inside the answer: a citation drawn with no anchor. Its destination is its
+   * data-pplx-citation-url, else the site its favicon request names, which is
+   * all a ChatGPT pill shows until it is clicked. Read into `links` (links.ts).
+   */
+  unlinkedCitations: string[];
   /** Present only while the answer is still being written. */
   streaming: string[];
   /** The assistant's own "searched the web" marker, inside the turn. */
@@ -122,7 +133,15 @@ export const CHATGPT: SiteSelectors = {
   assistantTurn: ['[data-content-search-unit-key$=":assistant"]', '[data-message-author-role="assistant"]'],
   turnScope: ['[data-turn-key]', 'article', '[data-testid^="conversation-turn-"]'],
   answerBody: ['[data-markdown-text-style="assistant-message"]', '[data-markdown-copy="contents"]', '.markdown', '[class*="markdown"]'],
-  answerNoise: ['[data-testid="webpage-citation-pill"]'],
+  /*
+   * The pill as drawn from the second 2026-10-15 capture: a span[role=button]
+   * opening a dialog, around a [data-pill] badge with the site's favicon and
+   * name ("Bright Infonet +1") and no anchor. Only a badge with a favicon is a
+   * citation; the same badge without one is a button ("Find my best-fit
+   * bootcamp") or a brand the answer names.
+   */
+  answerNoise: ['[data-testid="webpage-citation-pill"]', '[data-pill]:has(img[src*="favicons"])'],
+  chrome: [],
   questionText: ['.whitespace-pre-wrap', '[data-message-content]'],
   // Not in the 2026-10-15 capture: the picker sits outside the conversation and none of these matched.
   model: ['[data-testid="model-switcher-dropdown-button"]', 'button[aria-label^="Model selector" i]'],
@@ -140,7 +159,8 @@ export const CHATGPT: SiteSelectors = {
     'button[aria-label="Stop streaming" i]',
     '.result-streaming',
   ],
-  webSearch: ['[data-testid="webpage-citation-pill"]', '[data-testid*="search-results" i]'],
+  unlinkedCitations: ['[data-pill]:has(img[src*="favicons"])'],
+  webSearch: ['[data-testid="webpage-citation-pill"]', '[data-pill]:has(img[src*="favicons"])', '[data-testid*="search-results" i]'],
   private: ['form', '#prompt-textarea', '[data-testid*="composer" i]', '[data-testid*="profile" i]', '#thread-bottom-container'],
 };
 
@@ -160,6 +180,7 @@ export const PERPLEXITY: SiteSelectors = {
   turnScope: [],
   answerBody: ['div.prose[data-renderer="lm"]', 'div.prose'],
   answerNoise: ['span.citation', 'a.citation', '[data-pplx-citation]'],
+  chrome: [],
   questionText: [],
   model: [],
   modelAttributes: [],
@@ -170,6 +191,8 @@ export const PERPLEXITY: SiteSelectors = {
     siteName: ['[data-testid*="domain" i]'],
     records: [],
   },
+  // From the second 2026-10-15 capture the pill has no anchor at all: its page is in data-pplx-citation-url.
+  unlinkedCitations: ['[data-pplx-citation-url]'],
   streaming: ['[data-testid*="stop-generating" i]', 'button[aria-label="Stop" i]'],
   webSearch: ['[data-pplx-citation]', 'span.citation'],
   private: ['textarea', '[contenteditable="true"]', '[data-testid*="sidebar" i]', '[data-testid*="user-menu" i]', '[data-testid^="ask-input"]'],
@@ -190,6 +213,7 @@ export const CLAUDE: SiteSelectors = {
   turnScope: [],
   answerBody: ['[data-perf-reply-text]', '.standard-markdown', '.font-claude-response', '.font-claude-message'],
   answerNoise: ['span[data-not-prose]'],
+  chrome: [],
   questionText: [],
   model: ['[data-testid="model-selector-dropdown"]', 'button[data-testid*="model" i]'],
   modelAttributes: [],
@@ -200,6 +224,7 @@ export const CLAUDE: SiteSelectors = {
     siteName: ['[data-testid*="domain" i]'],
     records: [],
   },
+  unlinkedCitations: [],
   streaming: ['[data-testid="assistant-message"][data-is-streaming="true"]', '[data-is-streaming="true"]', 'button[aria-label="Stop response" i]'],
   webSearch: ['[data-testid*="web-search" i]', '[data-testid*="tool-use" i]'],
   private: [
@@ -225,6 +250,13 @@ export const GOOGLE_AI_MODE: SiteSelectors = {
   answerBody: [],
   // The reply's heading ("AI Mode replied:"), and every card list: cards are sources, not answer.
   answerNoise: ['h3.MheKwc', 'ul.hJYS7c', 'li.Ioqnib', '[aria-label="About this result"]'],
+  /*
+   * The AI Mode tab (udm=50), as captured 2026-10-15: after the reply, a block holding the "AI can make
+   * mistakes" line, the copy and share controls, the share dialog and the feedback form, whose links go to
+   * support.google.com; beside it, the right-hand column of source cards with its "Show all" button. The
+   * cards are still read as sources, from their own list.
+   */
+  chrome: ['[data-xid="Gd7Hsc"]', '[role="dialog"]', '[data-container-id="rhs-col"]'],
   questionText: [],
   model: [],
   modelAttributes: [],
@@ -237,6 +269,7 @@ export const GOOGLE_AI_MODE: SiteSelectors = {
     // The reply component: its inline data pairs each card's signed link with the origin (sources.ts).
     records: ['[data-subtree="aimc"]'],
   },
+  unlinkedCitations: [],
   streaming: ['[data-subtree="aimc"][data-complete="false"]'],
   webSearch: [],
   private: ['#gb', 'header', '[role="banner"]', 'form', '[aria-label^="Google Account" i]'],
@@ -257,6 +290,7 @@ export const GEMINI: SiteSelectors = {
   answerBody: ['message-content', '.markdown'],
   // Inline source chips ("ANI News") are citations, not prose.
   answerNoise: ['source-inline-chip', 'sources-carousel-inline', '.source-inline-chip-container'],
+  chrome: [],
   questionText: ['.query-text', '.query-text-line'],
   model: ['[data-test-id="bard-mode-menu-button"]', 'bard-mode-switcher button', 'button.input-area-switch'],
   modelAttributes: [],
@@ -267,6 +301,7 @@ export const GEMINI: SiteSelectors = {
     siteName: [],
     records: [],
   },
+  unlinkedCitations: [],
   streaming: ['model-response [aria-busy="true"]', 'button[aria-label="Stop response" i]'],
   webSearch: ['source-inline-chip', 'sources-carousel-inline'],
   private: [

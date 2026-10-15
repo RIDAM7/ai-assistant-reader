@@ -40,8 +40,34 @@ export interface Snapshot {
 
 const attr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
+const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}/g;
+
+/**
+ * Email addresses out of what no reader sees: comments and attribute values.
+ * Google's AI Mode tab keeps the signed-in account's address in the inline data
+ * of its suggestion records, in HTML comments, 20 times on the first capture of
+ * the tab. Text stays as it is: an address an answer prints is the answer's, as
+ * a designer's contact address is in a SERP snippet SERP Reader keeps.
+ */
+function redactHidden(node: Node) {
+  if (node.nodeType === 8) {
+    const t = node.textContent ?? '';
+    if (EMAIL.test(t)) node.textContent = t.replace(EMAIL, '[email]');
+    EMAIL.lastIndex = 0;
+    return;
+  }
+  if (node.nodeType !== 1) return;
+  const el = node as Element;
+  for (const a of Array.from(el.attributes)) {
+    if (EMAIL.test(a.value)) el.setAttribute(a.name, a.value.replace(EMAIL, '[email]'));
+    EMAIL.lastIndex = 0;
+  }
+  el.childNodes.forEach(redactHidden);
+}
+
 function serialise(el: Element, remove: string[]): string {
   const clone = cleanClone(el, remove);
+  redactHidden(clone);
   // Inlined images as data: URIs are the bulk of a page and nothing a parser reads.
   clone.querySelectorAll('img[src^="data:"]').forEach((img) => {
     if ((img.getAttribute('src') ?? '').length > 512) img.setAttribute('src', 'data:,');
@@ -49,15 +75,31 @@ function serialise(el: Element, remove: string[]): string {
   return clone.outerHTML;
 }
 
+/**
+ * Whether cleaning `root` would cut `el` out: `el`, or an ancestor of it below
+ * the root, matches a private selector. The first real Gemini capture's
+ * snapshot was its <main> with only the sidebar button left: a private element
+ * held the whole conversation, and the export kept nothing a re-parse could read.
+ */
+function cutOut(root: Element, el: Element, remove: string[]): boolean {
+  for (let e: Element | null = el; e && e !== root; e = e.parentElement) {
+    if (remove.some((sel) => { try { return e!.matches(sel); } catch { return false; } })) return true;
+  }
+  return false;
+}
+
 export function snapshot(doc: Document, input: SnapshotInput, maxBytes: number): Snapshot | undefined {
   const remove = [...GENERIC.private, ...input.site.private];
   const anchor = input.answerTurn;
+  const keep = [input.lastUser, anchor].filter((e): e is Element => Boolean(e));
+  const survives = (root: Element) => keep.every((e) => root.contains(e) && !cutOut(root, e, remove));
 
-  // The conversation: the site's root, else main, that holds the answer. Never <body>: it holds the sidebar.
+  // The conversation: the site's root, else main, that holds the answer and keeps it once cleaned. Never <body>: it holds the sidebar.
   const conversation = anchor
-    ? [...pickAll(doc, input.site.roots), ...pickAll(doc, ['main', '[role="main"]'])].find((r) => r.contains(anchor))
+    ? [...pickAll(doc, input.site.roots), ...pickAll(doc, ['main', '[role="main"]'])].find(survives)
     : (pickAll(doc, ['main', '[role="main"]'])[0] ?? doc.body);
-  const pair = commonAncestor([input.lastUser, anchor].filter((e): e is Element => Boolean(e)));
+  const ancestor = commonAncestor(keep);
+  const pair = ancestor && survives(ancestor) ? ancestor : anchor;
 
   const wrap = (root: Element) => {
     const outside = input.extras.filter((e) => !root.contains(e) && !input.extras.some((o) => o !== e && o.contains(e)));

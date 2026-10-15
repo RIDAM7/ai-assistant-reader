@@ -33,6 +33,12 @@ export interface AnswerLink {
   count: number;
   /** True when `url` is a Google /goto whose destination is not in the page. Kept, never guessed at. */
   urlIsRedirect?: boolean;
+  /**
+   * True when the page named only the site: a ChatGPT citation pill shows its
+   * source's favicon and name, and the page itself only once clicked. `url` is
+   * then the site's origin, never a guessed page.
+   */
+  urlIsOrigin?: boolean;
 }
 
 /** One entry of the sources or citations panel, in the panel's order. */
