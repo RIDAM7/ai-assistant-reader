@@ -28,7 +28,7 @@
  * broader one that matches its children.
  */
 
-export const PARSER_VERSION = '1.3.0';
+export const PARSER_VERSION = '1.4.0';
 
 export interface SiteSelectors {
   /** The conversation's container: the snapshot's root. Must hold the last answer to be used. */
@@ -69,6 +69,11 @@ export interface SiteSelectors {
      * each source, searched for a /goto card's origin when the card names none.
      */
     records: string[];
+    /**
+     * In the answer: a citation that names its source and links nowhere. Read as a source with that
+     * name and no domain, once per name, when no panel gives the sources (sources.ts).
+     */
+    named: string[];
   };
   /**
    * Inside the answer: a citation drawn with no anchor. Its destination is its
@@ -152,6 +157,7 @@ export const CHATGPT: SiteSelectors = {
     title: ['[data-testid*="title" i]', '.font-semibold', 'h3', 'h4'],
     siteName: ['[data-testid*="domain" i]', '.text-token-text-secondary'],
     records: [],
+    named: [],
   },
   streaming: [
     '[data-talvt-turn-state]:not([data-talvt-turn-state="complete"])',
@@ -190,6 +196,7 @@ export const PERPLEXITY: SiteSelectors = {
     title: ['[data-testid*="title" i]', '.line-clamp-2', '.line-clamp-1'],
     siteName: ['[data-testid*="domain" i]'],
     records: [],
+    named: [],
   },
   // From the second 2026-10-15 capture the pill has no anchor at all: its page is in data-pplx-citation-url.
   unlinkedCitations: ['[data-pplx-citation-url]'],
@@ -223,6 +230,7 @@ export const CLAUDE: SiteSelectors = {
     title: ['[data-testid*="title" i]', '.font-medium'],
     siteName: ['[data-testid*="domain" i]'],
     records: [],
+    named: [],
   },
   unlinkedCitations: [],
   streaming: ['[data-testid="assistant-message"][data-is-streaming="true"]', '[data-is-streaming="true"]', 'button[aria-label="Stop response" i]'],
@@ -268,6 +276,7 @@ export const GOOGLE_AI_MODE: SiteSelectors = {
     siteName: ['span.EsfOKc'],
     // The reply component: its inline data pairs each card's signed link with the origin (sources.ts).
     records: ['[data-subtree="aimc"]'],
+    named: [],
   },
   unlinkedCitations: [],
   streaming: ['[data-subtree="aimc"][data-complete="false"]'],
@@ -300,6 +309,12 @@ export const GEMINI: SiteSelectors = {
     title: [],
     siteName: [],
     records: [],
+    /*
+     * As captured 2026-10-15: a chip per citation ("TryDigital Solution"), its button labelled "View source
+     * details for citation from TryDigital Solution", and no URL anywhere; the sources list stays empty
+     * until the chip is clicked.
+     */
+    named: ['source-inline-chip'],
   },
   unlinkedCitations: [],
   streaming: ['model-response [aria-busy="true"]', 'button[aria-label="Stop response" i]'],
@@ -313,6 +328,9 @@ export const GEMINI: SiteSelectors = {
     'top-bar-actions',
     'header',
     '[aria-label*="Google Account" i]',
+    // The first real capture: the person's own profile photo beside the question, and the composer's frame.
+    'user-profile-picture',
+    'input-container',
   ],
 };
 

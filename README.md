@@ -226,8 +226,9 @@ change — read the diff it prints first.
   version assumed, and ChatGPT and Perplexity changed again within the day.
   Gemini's first capture kept no conversation in its snapshot (fixed in 1.3.0)
   and read its question as "You said <preview>… <question>", which is cleaned
-  from the text alone. Until a real Gemini capture is imported, read
-  `diagnostics.layers` on its captures.
+  from the text alone; its second (1.4.0) is a real fixture. Gemini's
+  citations are chips that name a source and link nowhere until clicked: they
+  are read as sources with that `siteName` and no domain, once per name.
 - **ChatGPT's model is not read.** Its per-message model id is gone and the
   picker sits outside the conversation; no selector matched on the first
   capture. Perplexity shows no answering model at all.

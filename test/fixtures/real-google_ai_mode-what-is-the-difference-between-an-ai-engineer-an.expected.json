@@ -3,7 +3,7 @@
   "capturedAt": "2026-10-15T14:32:52.142Z",
   "url": "https://www.google.com/search?rlz=1C1CHBF_enIN1175__1176&sourceid=chrome&ie=UTF-8&amc=1&gs_lcrp=EgZjaHJvbWUqFQgAEAAYQhi0AhjqAhjwBRieBhjKBjIVCAAQABhCGLQCGOoCGPAFGJ4GGMoGMhUIARAAGEIYtAIY6gIY8AUYngYYygYyFQgCEAAYQhi0AhjqAhjwBRieBhjKBtIBDTE2NDcwNjcxajBqMzGoAgOwAgE&oq=&cud=0&sxsrf=APpeQnt82G51K7KMZNcrsBQ9_rVaaSBIXQ%3A1792058941669&udm=50&q=What+is+the+difference+between+an+AI+engineer+and+an+ML+engineer%2C+and+which+should+a+fresher+in+India+choose%3F&mstk=AUtExfBfWvuzULsuZQTTzWxLoh1nvMD9c5MOl_yWR-zyJeV-19VH-prBzCTylR_8qYbClq4Tfc84NVkoNsn7Q114_qd_gqNlDgfyTfdKAYZFdrMDQqfEdWjexvTiFHYoAW-NmR6s9Xzc9ZTHdqJuEJettVaY1DZDCqV4i31m8jGLu8BKGLOm7nwu7nVKq1Fx9OU9uQQ4ZPZp1YfJsUSjmmWHvPPVX4LrGb5Ju8lqElyJAnPpLYGMm6yf9ZdHimiT06Ad-Yab8ftTgbYLZg&csuir=1&zx=1792074721794&mtid=4uPQaqWzEOWQ4-EPudDtiQQ",
   "assistant": "google_ai_mode",
-  "parserVersion": "1.3.0",
+  "parserVersion": "1.4.0",
   "question": "What is the difference between an AI engineer and an ML engineer, and which should a fresher in India choose?",
   "model": null,
   "webSources": true,

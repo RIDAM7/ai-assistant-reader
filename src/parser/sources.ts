@@ -126,6 +126,20 @@ export function readSources(doc: Document, root: Element, site: SiteSelectors, c
   }
   if (out.length) return { sources: out, panels: sitePanels, layer: 'site' };
 
+  // Citations that name a source and link nowhere (Gemini's chips): the name is all the page holds.
+  const where = ctx.answer ?? ctx.scope;
+  if (where && site.sources.named.length) {
+    const names = new Set<string>();
+    for (const chip of pickAll(where, site.sources.named)) {
+      const label = chip.querySelector('[aria-label]')?.getAttribute('aria-label') ?? chip.getAttribute('aria-label') ?? '';
+      const name = label.match(/citation from (.+?)\.?\s*(?:Press |$)/i)?.[1]?.trim() || cleanLabel(text(chip));
+      if (!name || names.has(name.toLowerCase())) continue;
+      names.add(name.toLowerCase());
+      out.push({ order: out.length + 1, url: '', domain: '', siteName: name });
+    }
+    if (out.length) return { sources: out, panels: [], layer: 'site' };
+  }
+
   // The whole page, not the conversation: side sheets are drawn outside it.
   const found = panelsByHeading(root.ownerDocument?.body ?? root, ctx);
   for (const panel of found) readItems(Array.from(panel.querySelectorAll('a[href]')), site, ctx, out, seen, true);

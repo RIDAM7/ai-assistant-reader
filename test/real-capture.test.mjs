@@ -39,7 +39,9 @@ for (const file of captures) {
     // Always true of a usable capture, sidecar or not.
     assert.ok(d.answer.length > 0, 'no answer read from a real capture');
     for (const l of [...d.links, ...d.sources]) {
-      assert.ok(/^https?:\/\//.test(l.url), `a non-http url: ${l.url}`);
+      // A source named and linked nowhere (Gemini's chips) has no url, and then its name and no invented domain.
+      const named = l.url === '' && 'siteName' in l && Boolean(l.siteName) && l.domain === '';
+      assert.ok(named || /^https?:\/\//.test(l.url), `a non-http url: ${l.url}`);
       assert.ok(l.order > 0);
     }
     assert.deepEqual(d.links.map((l) => l.order), d.links.map((_, i) => i + 1), 'link order is not 1..n');

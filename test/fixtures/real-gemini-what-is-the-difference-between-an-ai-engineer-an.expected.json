@@ -1,0 +1,26 @@
+{
+  "origin": "Answer Reader capture, from answers-2026-10-15.json",
+  "capturedAt": "2026-10-15T15:19:03.752Z",
+  "url": "https://gemini.google.com/app/28769644941f849b?hl=en-IN",
+  "assistant": "gemini",
+  "parserVersion": "1.4.0",
+  "question": "What is the difference between an AI engineer and an ML engineer, and which should a fresher in India choose?",
+  "model": "GeminiAuto",
+  "webSources": true,
+  "answerNonEmpty": true,
+  "linkCount": 0,
+  "linkDomains": [],
+  "sourceCount": 3,
+  "sourceDomains": [
+    "",
+    "",
+    ""
+  ],
+  "layers": {
+    "question": "site",
+    "answer": "site",
+    "links": "none",
+    "sources": "site",
+    "model": "site"
+  }
+}

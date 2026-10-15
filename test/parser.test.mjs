@@ -476,3 +476,22 @@ test('the snapshot keeps no email address a reader never sees, and every one the
   assert.match(raw, /admissions@institute\.example/);
   assert.match(raw, /\[email\]/);
 });
+
+test("Gemini: a chip that names its source and links nowhere is a source by that name, once; the question is clean", () => {
+  const d = real(`gemini-${Q1}`);
+  assert.equal(d.metadata.question, 'What is the difference between an AI engineer and an ML engineer, and which should a fresher in India choose?');
+  assert.deepEqual(d.sources.map((s) => [s.siteName, s.domain, s.url]), [['TryDigital Solution', '', ''], ['CloudThat', '', ''], ['AY Automate', '', '']]);
+  assert.equal(d.metadata.webSources, true);
+  assert.doesNotMatch(d.answer, /TryDigital|AY Automate/, 'a chip is a citation, not prose');
+  assert.match(d.answer, /^Feature \| AI Engineer \(Product & Systems Focus\) \| ML Engineer \(Models & Algorithms Focus\)$/m);
+});
+
+test("Gemini: the person's profile picture never reaches the snapshot", () => {
+  const html = geminiPage().replace(
+    '<user-query>',
+    '<user-query><user-profile-picture><img alt="profile picture" src="https://lh3.googleusercontent.com/a/person-photo"></user-profile-picture>',
+  );
+  const raw = collectAnswer(parse(html), URLS.gemini, { includeRawHtml: true }).rawHtml;
+  assert.doesNotMatch(raw, /person-photo|profile picture/);
+  assert.match(raw, /query-text-line/);
+});
