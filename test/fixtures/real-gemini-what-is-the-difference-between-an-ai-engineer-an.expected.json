@@ -3,7 +3,7 @@
   "capturedAt": "2026-10-15T15:19:03.752Z",
   "url": "https://gemini.google.com/app/28769644941f849b?hl=en-IN",
   "assistant": "gemini",
-  "parserVersion": "1.4.1",
+  "parserVersion": "1.4.2",
   "question": "What is the difference between an AI engineer and an ML engineer, and which should a fresher in India choose?",
   "model": "GeminiAuto",
   "webSources": true,

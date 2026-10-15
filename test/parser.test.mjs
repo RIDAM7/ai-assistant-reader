@@ -503,3 +503,9 @@ test('Gemini: a question short enough to preview whole is not read twice', () =>
   );
   assert.equal(collectAnswer(parse(html), URLS.gemini).metadata.question, QUESTION);
 });
+
+test("Gemini: a chip's count of further sources is not part of the source's name", () => {
+  const chip = (name) => `<source-inline-chip><button aria-label="View source details for citation from ${name}. Press Enter to open sources dialogue.">${name}</button></source-inline-chip>`;
+  const html = geminiPage({ answer: `<p>Two programs stand out.${chip('IIT KGP Online')} One more.${chip('IIT KGP Online+ 1')}${chip('CloudThat')}</p>` });
+  assert.deepEqual(collectAnswer(parse(html), URLS.gemini).sources.map((s) => s.siteName), ['IIT KGP Online', 'CloudThat']);
+});

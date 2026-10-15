@@ -132,7 +132,8 @@ export function readSources(doc: Document, root: Element, site: SiteSelectors, c
     const names = new Set<string>();
     for (const chip of pickAll(where, site.sources.named)) {
       const label = chip.querySelector('[aria-label]')?.getAttribute('aria-label') ?? chip.getAttribute('aria-label') ?? '';
-      const name = label.match(/citation from (.+?)\.?\s*(?:Press |$)/i)?.[1]?.trim() || cleanLabel(text(chip));
+      // "IIT KGP Online+ 1": the chip's count of further sources, which the full check of 2026-10-15 showed, is not the name.
+      const name = (label.match(/citation from (.+?)\.?\s*(?:Press |$)/i)?.[1]?.trim() || cleanLabel(text(chip))).replace(/\s*\+\s*\d+$/, '');
       if (!name || names.has(name.toLowerCase())) continue;
       names.add(name.toLowerCase());
       out.push({ order: out.length + 1, url: '', domain: '', siteName: name });

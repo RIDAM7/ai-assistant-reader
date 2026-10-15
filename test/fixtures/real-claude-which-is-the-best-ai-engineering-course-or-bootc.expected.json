@@ -3,7 +3,7 @@
   "capturedAt": "2026-10-15T09:49:45.999Z",
   "url": "https://claude.ai/chat/add95a8c-4657-49c6-8880-288d8178a038",
   "assistant": "claude",
-  "parserVersion": "1.4.1",
+  "parserVersion": "1.4.2",
   "question": "Which is the best AI engineering course or bootcamp in India for freshers, with live classes?",
   "model": null,
   "webSources": true,

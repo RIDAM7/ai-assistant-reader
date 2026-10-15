@@ -3,7 +3,7 @@
   "capturedAt": "2026-10-15T14:32:45.852Z",
   "url": "https://claude.ai/chat/1a589a7f-f088-4dea-87e8-52f535e93936",
   "assistant": "claude",
-  "parserVersion": "1.4.1",
+  "parserVersion": "1.4.2",
   "question": "What is the difference between an AI engineer and an ML engineer, and which should a fresher in India choose?",
   "model": "Sonnet 5.5 Medium",
   "webSources": false,
